@@ -1,0 +1,1 @@
+ALTER TABLE public.event_config ADD COLUMN IF NOT EXISTS evento_ativo boolean NOT NULL DEFAULT true;

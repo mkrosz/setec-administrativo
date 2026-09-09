@@ -1,0 +1,178 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * SETEC Admin design system.
+ * Dark-first: deep navy canvas, near-black panels, amethyst accent.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-panel: var(--panel);
+  --color-field: var(--field);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.16 0.035 274);
+  --foreground: oklch(0.97 0.005 280);
+  --card: oklch(0.13 0.012 280);
+  --card-foreground: oklch(0.97 0.005 280);
+  --panel: oklch(0.155 0.014 280);
+  --field: oklch(0.185 0.012 280);
+  --popover: oklch(0.15 0.014 280);
+  --popover-foreground: oklch(0.97 0.005 280);
+  --primary: oklch(0.53 0.17 292);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-glow: oklch(0.62 0.19 295);
+  --secondary: oklch(0.22 0.02 280);
+  --secondary-foreground: oklch(0.97 0.005 280);
+  --muted: oklch(0.22 0.018 280);
+  --muted-foreground: oklch(0.68 0.015 280);
+  --accent: oklch(0.24 0.03 290);
+  --accent-foreground: oklch(0.97 0.005 280);
+  --destructive: oklch(0.66 0.19 22);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.28 0.02 282);
+  --input: oklch(0.28 0.02 282);
+  --ring: oklch(0.53 0.17 292);
+}
+
+.light {
+  --background: oklch(0.97 0.006 280);
+  --foreground: oklch(0.18 0.03 280);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 280);
+  --panel: oklch(0.99 0.003 280);
+  --field: oklch(0.96 0.006 280);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 280);
+  --secondary: oklch(0.94 0.008 280);
+  --secondary-foreground: oklch(0.2 0.03 280);
+  --muted: oklch(0.94 0.008 280);
+  --muted-foreground: oklch(0.48 0.02 280);
+  --accent: oklch(0.93 0.02 292);
+  --accent-foreground: oklch(0.2 0.03 280);
+  --border: oklch(0.89 0.01 282);
+  --input: oklch(0.89 0.01 282);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Alternância de logotipo por tema */
+.logo-on-light {
+  opacity: 0;
+}
+.light .logo-on-light {
+  opacity: 1;
+}
+.light .logo-on-dark {
+  opacity: 0;
+}
+
+@utility field-pill {
+  background-color: var(--field);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 9999px;
+  color: var(--foreground);
+  &::placeholder {
+    color: color-mix(in oklab, var(--muted-foreground) 85%, transparent);
+  }
+  &:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--primary) 80%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+}
+
+@utility panel-surface {
+  background-color: var(--panel);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  border-radius: calc(var(--radius) + 12px);
+}
+
+@utility amethyst-glow {
+  background-image: radial-gradient(
+    ellipse 60% 55% at 50% 45%,
+    color-mix(in oklab, var(--primary) 32%, transparent),
+    transparent 70%
+  );
+}
+
+@utility title-gradient {
+  background-image: linear-gradient(
+    92deg,
+    var(--foreground) 0%,
+    color-mix(in oklab, var(--foreground) 80%, var(--primary-glow)) 55%,
+    color-mix(in oklab, var(--primary-glow) 55%, white) 100%
+  );
+  background-clip: text;
+  color: transparent;
+}
+
+/* Barra de rolagem no estilo do layout */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--primary) 60%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: color-mix(in oklab, var(--field) 70%, transparent);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--primary) 65%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--primary-glow) 85%, transparent);
+  background-clip: padding-box;
+}
