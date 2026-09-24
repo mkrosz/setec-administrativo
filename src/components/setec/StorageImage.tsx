@@ -14,17 +14,34 @@ export function StorageImage({
   fallback?: React.ReactNode;
 }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     let active = true;
-    resolveUrl(path).then((u) => {
-      if (active) setUrl(u);
-    });
+    setHasError(false);
+
+    if (path) {
+      resolveUrl(path).then((u) => {
+        if (active) setUrl(u);
+      });
+    } else {
+      setUrl(null);
+    }
+
     return () => {
       active = false;
     };
   }, [path]);
 
-  if (!url) return <>{fallback ?? null}</>;
-  return <img src={url} alt={alt} loading="lazy" className={cn("object-contain", className)} />;
+  if (!url || hasError) return <>{fallback ?? null}</>;
+
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      onError={() => setHasError(true)}
+      className={cn("object-contain", className)}
+    />
+  );
 }
