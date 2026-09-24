@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState } from "react";
-import { Camera, ChevronDown, Loader2 } from "lucide-react";
+import { Camera, ChevronDown, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -16,11 +16,18 @@ type Props = {
   onSaved: () => void;
 };
 
+type ImageItem = {
+  id: string;
+  url: string | null;
+  file: File | null;
+  preview: string;
+};
+
 export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
-  const [foto, setFoto] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageItem[]>([]);
+
   const [form, setForm] = useState({
     nome_completo: "",
     cargo: "",
@@ -36,7 +43,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
 
   useEffect(() => {
     if (!open) return;
-    setFoto(null);
+
     setForm({
       nome_completo: palestra?.nome_completo ?? "",
       cargo: palestra?.cargo ?? "",
@@ -49,19 +56,60 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
       sobre_palestra: palestra?.sobre_palestra ?? "",
       sobre_palestrante: palestra?.sobre_palestrante ?? "",
     });
-    resolveUrl(palestra?.foto_url ?? null).then(setPreview);
+
+    const rawUrls: string[] = Array.isArray(palestra?.foto_url)
+      ? palestra.foto_url
+      : typeof palestra?.foto_url === "string" && palestra.foto_url
+      ? [palestra.foto_url]
+      : [];
+
+    Promise.all(
+      rawUrls.map(async (path) => ({
+        id: Math.random().toString(),
+        url: path,
+        file: null,
+        preview: (await resolveUrl(path)) || "",
+      }))
+    ).then(setImages);
   }, [open, palestra]);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const newItems: ImageItem[] = files.map((file) => ({
+      id: Math.random().toString(),
+      url: null,
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setImages((prev) => [...prev, ...newItems]);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function removeImage(id: string) {
+    setImages((prev) => prev.filter((item) => item.id !== id));
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      let foto_url = palestra?.foto_url ?? null;
-      if (foto) foto_url = await uploadFile(foto, "palestrantes");
+      const finalUrls: string[] = [];
+
+      for (const img of images) {
+        if (img.url) {
+          finalUrls.push(img.url);
+        } else if (img.file) {
+          const uploadedPath = await uploadFile(img.file, "palestrantes");
+          if (uploadedPath) finalUrls.push(uploadedPath);
+        }
+      }
 
       const payload = {
         ...form,
@@ -73,12 +121,13 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
         local: form.local || null,
         sobre_palestra: form.sobre_palestra || null,
         sobre_palestrante: form.sobre_palestrante || null,
-        foto_url,
+        foto_url: finalUrls,
       };
 
       const { error } = palestra
         ? await supabase.from("palestras").update(payload).eq("id", palestra.id)
         : await supabase.from("palestras").insert(payload);
+
       if (error) throw error;
 
       toast.success(palestra ? "Palestra atualizada" : "Palestra cadastrada");
@@ -109,58 +158,66 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
           <div className="border-t border-border/60" />
 
           <form id="palestra-form" onSubmit={onSubmit} className="space-y-4 px-7 py-5">
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="flex h-[76px] w-[76px] shrink-0 flex-col items-center justify-center gap-1 self-end rounded-2xl border border-border/70 bg-field text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground overflow-hidden"
-              >
-                {preview && !foto ? (
-                  <img src={preview} alt="Foto do palestrante" className="h-full w-full rounded-2xl object-cover" />
-                ) : foto ? (
-                  <img
-                    src={URL.createObjectURL(foto)}
-                    alt="Prévia da foto"
-                    className="h-full w-full rounded-2xl object-cover"
-                  />
-                ) : (
-                  <>
-                    <Camera className="h-5 w-5" />
-                    <span className="text-[10px] tracking-[0.14em]">FOTO</span>
-                  </>
-                )}
-              </button>
+            {/* Seção de Fotos Múltiplas */}
+            <div className="space-y-2">
+              <span className={label}>Fotos dos Palestrantes ({images.length})</span>
+              <div className="flex flex-wrap gap-3">
+                {images.map((img) => (
+                  <div key={img.id} className="relative h-20 w-20 rounded-2xl border border-border/70 overflow-hidden group">
+                    <img src={img.preview} alt="Palestrante" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(img.id)}
+                      className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-90 hover:bg-red-600 transition-colors"
+                      title="Remover foto"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border/70 bg-field text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="text-[10px] tracking-[0.14em]">+ FOTO</span>
+                </button>
+              </div>
+
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
-                onChange={(e) => setFoto(e.target.files?.[0] ?? null)}
+                onChange={handleFileSelect}
               />
+            </div>
 
-              <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <span className={label}>Nome completo</span>
-                  <input
-                    required
-                    maxLength={120}
-                    value={form.nome_completo}
-                    onChange={(e) => set("nome_completo", e.target.value)}
-                    placeholder="Ex: Dr. Alan Turing"
-                    className={pill}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <span className={label}>Cargo / Instituição</span>
-                  <input
-                    required
-                    maxLength={140}
-                    value={form.cargo}
-                    onChange={(e) => set("cargo", e.target.value)}
-                    placeholder="Ex: Pesquisador Chefe, MIT"
-                    className={pill}
-                  />
-                </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <span className={label}>Nome(s) Completo(s)</span>
+                <input
+                  required
+                  maxLength={120}
+                  value={form.nome_completo}
+                  onChange={(e) => set("nome_completo", e.target.value)}
+                  placeholder="Ex: Dr. Alan Turing, Ada Lovelace"
+                  className={pill}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className={label}>Cargo / Instituição</span>
+                <input
+                  required
+                  maxLength={140}
+                  value={form.cargo}
+                  onChange={(e) => set("cargo", e.target.value)}
+                  placeholder="Ex: Pesquisadores do MIT"
+                  className={pill}
+                />
               </div>
             </div>
 
@@ -199,7 +256,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
             </div>
 
             <div className="grid gap-3 sm:grid-cols-4">
-             <div className="space-y-1.5">
+              <div className="space-y-1.5">
                 <span className="block text-xs text-muted-foreground">Data</span>
                 <input
                   type="text"
@@ -226,7 +283,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
                   className={pill}
                 />
               </div>
-            <div className="space-y-1.5">
+              <div className="space-y-1.5">
                 <span className="block text-xs text-muted-foreground">Início (HH:MM)</span>
                 <input
                   type="text"
@@ -284,7 +341,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
                 />
               </div>
               <div className="space-y-1.5">
-                <span className={label}>Sobre o palestrante</span>
+                <span className={label}>Sobre o(s) palestrante(s)</span>
                 <textarea
                   required
                   rows={3}
