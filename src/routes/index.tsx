@@ -1,5 +1,5 @@
+import React, { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -109,8 +109,8 @@ function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[oklch(0.09_0.01_285)] px-4">
-      <div className="amethyst-glow pointer-events-none absolute left-1/2 top-1/2 h-[1100px] w-[1100px] -translate-x-1/2 -translate-y-1/2" />
-      <section className="relative w-full max-w-[386px] rounded-2xl bg-card p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
+      <div className="amethyst-glow pointer-events-none absolute left-1/2 top-1/2 h-275 w-275 -translate-x-1/2 -translate-y-1/2" />
+      <section className="relative w-full max-w-96.5 rounded-2xl bg-card p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
         <div className="flex justify-center">
           <SetecLogo />
         </div>
@@ -124,7 +124,7 @@ function LoginPage() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="email"
               required
@@ -137,7 +137,7 @@ function LoginPage() {
           </div>
 
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+            <Lock className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type={show ? "text" : "password"}
               required
@@ -154,7 +154,7 @@ function LoginPage() {
               aria-label={show ? "Ocultar senha" : "Mostrar senha"}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             >
-              {show ? <Eye className="h-[18px] w-[18px]" /> : <EyeOff className="h-[18px] w-[18px]" />}
+              {show ? <Eye className="h-4.5 w-4.5" /> : <EyeOff className="h-4.5 w-4.5" />}
             </button>
           </div>
 

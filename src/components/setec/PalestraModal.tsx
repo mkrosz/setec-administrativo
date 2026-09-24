@@ -125,8 +125,8 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
       };
 
       const { error } = palestra
-        ? await supabase.from("palestras").update(payload).eq("id", palestra.id)
-        : await supabase.from("palestras").insert(payload);
+        ? await supabase.from("palestras").update(payload as any).eq("id", palestra.id)
+        : await supabase.from("palestras").insert(payload as any);
 
       if (error) throw error;
 

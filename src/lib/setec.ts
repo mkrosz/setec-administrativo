@@ -17,7 +17,7 @@ export const CATEGORIAS = [
 
 export type Palestra = {
   id: string;
-  foto_url: string | null;
+  foto_url: string | string[] | null;
   nome_completo: string;
   cargo: string | null;
   titulo: string;
@@ -64,15 +64,37 @@ export async function uploadFile(file: File, folder: string): Promise<string> {
   return path;
 }
 
-/** Resolves a stored object path (or absolute URL) to a displayable URL. */
-export async function resolveUrl(pathOrUrl: string | null): Promise<string | null> {
+/** Resolves a stored object path (or absolute URL) to a displayable public URL. */
+export async function resolveUrl(pathOrUrl: string | null | undefined): Promise<string | null> {
   if (!pathOrUrl) return null;
-  if (pathOrUrl.startsWith("http")) return pathOrUrl;
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(pathOrUrl, 60 * 60 * 24);
-  if (error) return null;
-  return data.signedUrl;
+  if (typeof pathOrUrl !== "string") return null;
+
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+    return pathOrUrl;
+  }
+
+  const cleanPath = pathOrUrl.startsWith("/") ? pathOrUrl.slice(1) : pathOrUrl;
+
+  if (cleanPath.startsWith("storage/v1/object/public/")) {
+    const supabaseUrl = (import.meta.env["VITE_SUPABASE_URL"] as string) ?? "";
+    return `${supabaseUrl}/${cleanPath}`;
+  }
+
+  // Tenta gerar a URL pública primeiro (mais rápido e seguro para exibição de assets públicos)
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(cleanPath);
+  if (data?.publicUrl) {
+    return data.publicUrl;
+  }
+
+  // Fallback para URL assinada caso o bucket seja estritamente privado
+  try {
+    const { data: signedData } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(cleanPath, 60 * 60 * 24);
+    return signedData?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function initials(name: string) {
