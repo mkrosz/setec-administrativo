@@ -330,7 +330,7 @@ function Painel() {
   return (
     <>
       <main className="relative min-h-screen overflow-hidden bg-background px-6 pb-24 pt-8 md:px-16">
-        <header className="relative mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-4">
+        <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
           <SetecLogo />
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -351,7 +351,7 @@ function Painel() {
                     <Download className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[170px]">
+                <DropdownMenuContent align="end" className="min-w-42.5">
                   <DropdownMenuItem onClick={() => comEspera(exportarPDF, "PDF gerado")}>
                     <FileText className="mr-2 h-4 w-4" />
                     Apenas PDF
@@ -428,7 +428,7 @@ function Painel() {
           </div>
         </header>
 
-        <div className="relative mx-auto mt-14 max-w-[1160px]">
+        <div className="relative mx-auto mt-14 max-w-290">
           <h1 className="title-gradient font-display text-6xl font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
             Painel
             <br />
@@ -449,12 +449,12 @@ function Painel() {
             <div className="mt-3 flex flex-col gap-5 lg:flex-row">
               <button
                 onClick={() => logoRef.current?.click()}
-                className="flex h-[170px] w-full max-w-[260px] items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-field/40 text-muted-foreground transition-colors hover:border-primary/60"
+                className="flex h-42.5 w-full max-w-65 items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-field/40 text-muted-foreground transition-colors hover:border-primary/60"
               >
                 <StorageImage
                   path={config.data?.logo_url ?? null}
                   alt="Logo do evento"
-                  className="max-h-[120px] max-w-[200px]"
+                  className="max-h-30 max-w-50"
                   fallback={
                     <span className="flex items-center gap-3">
                       <SetecMark className="h-10 w-14 opacity-70" />
@@ -548,7 +548,7 @@ function Painel() {
                       fallback={<>{initials(p.nome_completo)}</>}
                     />
                   </span>
-                  <div className="min-w-0 flex-1">
+                                    <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 truncate text-base text-foreground">
                       <span className="truncate">{p.titulo || "(Sem título)"}</span>
                       {p.rascunho && (
@@ -645,7 +645,7 @@ function Painel() {
               {apoiadoresPagina.map((s) => (
                 <div
                   key={s.id}
-                  className="group relative h-[95px] w-[195px] overflow-hidden rounded-lg border border-border/60 bg-field"
+                  className="group relative h-23.75 w-48.75 overflow-hidden rounded-lg border border-border/60 bg-field"
                 >
                   <StorageImage
                     path={s.logo_url}
@@ -657,7 +657,7 @@ function Painel() {
                       </span>
                     }
                   />
-                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/80 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       aria-label="Editar apoiador"
                       onClick={() => {
@@ -800,7 +800,7 @@ function ConfigField({
 
   return (
     <label
-      className={`flex h-[74px] flex-col justify-center gap-1 rounded-2xl border border-border/60 bg-field/60 px-5 ${className ?? ""}`}
+      className={`flex h-18.5 flex-col justify-center gap-1 rounded-2xl border border-border/60 bg-field/60 px-5 ${className ?? ""}`}
     >
       <span className={fieldLabel}>{label}</span>
       <span className="flex items-center gap-2">
