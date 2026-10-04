@@ -122,11 +122,11 @@ export async function importarJSON(file: File) {
   }
 
   if (palestras.length) {
-    const { error } = await supabase.from("palestras").upsert(palestras);
+    const { error } = await supabase.from("palestras").upsert(palestras as any);
     if (error) throw error;
   }
   if (apoiadores.length) {
-    const { error } = await supabase.from("patrocinadores").upsert(apoiadores);
+    const { error } = await supabase.from("patrocinadores").upsert(apoiadores as any);
     if (error) throw error;
   }
 
