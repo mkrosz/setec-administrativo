@@ -24,6 +24,7 @@ import {
   UserCheck,
   UserRound,
   UserX,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +44,9 @@ import {
 import { exportarJSON, exportarPDF, importarJSON } from "@/lib/backup";
 import {
   NIVEIS,
+  GRUPOS_COMISSAO,
+  type GrupoComissao,
+  type MembroComissao,
   formatDia,
   formatHora,
   initials,
@@ -52,6 +56,7 @@ import {
   type Patrocinador,
 } from "@/lib/setec";
 import { useTheme } from "@/hooks/use-theme";
+import { ComissaoModal } from "@/components/setec/ComissaoModal";
 
 type AppRole = "admin" | "user";
 type Profile = { id: string; email: string; role: AppRole; ativo: boolean; created_at: string };
@@ -96,6 +101,9 @@ function Painel() {
   const importRef = useRef<HTMLInputElement>(null);
   const [diaAtivo, setDiaAtivo] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [comissaoOpen, setComissaoOpen] = useState(false);
+  const [comissaoEdit, setComissaoEdit] = useState<MembroComissao | null>(null);
+  const [grupoAtivo, setGrupoAtivo] = useState<GrupoComissao>("professor");
   const { isLight, toggle } = useTheme();
 
   const config = useQuery({
@@ -159,6 +167,18 @@ function Painel() {
       return (data ?? []) as Profile[];
     },
   });
+
+  const comissao = useQuery({
+  queryKey: ["comissao"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("comissao" as any)
+      .select("*")
+      .order("nome", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as MembroComissao[];
+  },
+});
 
   const removerConta = useServerFn(removerAcesso);
 
@@ -225,10 +245,21 @@ function Painel() {
     queryClient.invalidateQueries({ queryKey: ["patrocinadores"] });
   }
 
+  async function removerMembro(id: string) {
+    const { error } = await supabase.from("comissao" as any).delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Membro removido");
+    queryClient.invalidateQueries({ queryKey: ["comissao"] });
+  }
+
   async function resetarAno() {
     if (!confirm("Resetar todos os dados do ano? Palestras e apoiadores serão apagados.")) return;
     await supabase.from("palestras").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     await supabase.from("patrocinadores").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("comissao" as any).delete().neq("id", "00000000-0000-0000-0000-000000000000");
     queryClient.invalidateQueries();
     toast.success("Dados do ano resetados");
   }
@@ -298,6 +329,7 @@ function Painel() {
     () => (patrocinadores.data ?? []).filter((p) => p.nivel === nivelAtivo),
     [patrocinadores.data, nivelAtivo],
   );
+  const membrosDoGrupo = (comissao.data ?? []).filter((m) => m.grupo === grupoAtivo);
   const totalPgApoiadores = Math.max(1, Math.ceil(doNivel.length / PAGE));
   const apoiadoresPagina = doNivel.slice((pgApoiadores - 1) * PAGE, pgApoiadores * PAGE);
 
@@ -698,6 +730,84 @@ function Painel() {
             </button>
           </section>
 
+         {/* Comissão */}
+          <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
+            <Users className="h-5 w-5 text-primary-glow" />
+            Comissão
+          </h2>
+          <section className="panel-surface mt-5 p-7">
+            <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
+              {GRUPOS_COMISSAO.map((g) => {
+                const total = (comissao.data ?? []).filter((m) => m.grupo === g.value).length;
+                return (
+                  <button
+                    key={g.value}
+                    onClick={() => setGrupoAtivo(g.value)}
+                    className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                      grupoAtivo === g.value
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground/80"
+                    }`}
+                  >
+                    {g.label}
+                    <span className="ml-2 text-[10px] opacity-60">({total})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              {membrosDoGrupo.map((m) => (
+                <div
+                  key={m.id}
+                  className="group flex items-center gap-2 rounded-full border border-border/60 bg-field px-4 py-2 text-sm text-foreground"
+                >
+                  <span>
+                    {m.nome}
+                    {m.email && (
+                      <span className="ml-2 text-xs text-muted-foreground">{m.email}</span>
+                    )}
+                  </span>
+                  <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      aria-label="Editar membro"
+                      onClick={() => {
+                        setComissaoEdit(m);
+                        setComissaoOpen(true);
+                      }}
+                      className="rounded-full p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      aria-label="Remover membro"
+                      onClick={() => removerMembro(m.id)}
+                      className="rounded-full p-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                </div>
+              ))}
+              {membrosDoGrupo.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum membro cadastrado neste grupo.
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setComissaoEdit(null);
+                setComissaoOpen(true);
+              }}
+              className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+            >
+              <CirclePlus className="h-5 w-5" />
+              Adicionar Membro
+            </button>
+          </section>
+
           {/* Controle de Acessos — apenas administradores */}
           {isAdmin && (
             <>
@@ -776,6 +886,13 @@ function Painel() {
           patrocinador={sponsorEdit}
           nivelPadrao={nivelAtivo}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ["patrocinadores"] })}
+        />
+        <ComissaoModal
+          open={comissaoOpen}
+          onOpenChange={setComissaoOpen}
+          membro={comissaoEdit}
+          grupoPadrao={grupoAtivo}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["comissao"] })}
         />
       </main>
     </>
