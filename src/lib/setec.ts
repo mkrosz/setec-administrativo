@@ -15,6 +15,30 @@ export const CATEGORIAS = [
   "Inovação",
 ];
 
+export const LINK_TYPES = [
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "site", label: "Site" },
+  { value: "instagram", label: "Instagram" },
+  { value: "github", label: "GitHub" },
+  { value: "facebook", label: "Facebook" },
+  { value: "twitter", label: "X / Twitter" },
+  { value: "youtube", label: "YouTube" },
+] as const;
+
+export type LinkType = (typeof LINK_TYPES)[number]["value"];
+
+export type PalestraLink = {
+  type: LinkType;
+  url: string;
+};
+
+/** Garante o protocolo (https://) e retorna "" se estiver vazio. */
+export function normalizeUrl(raw: string): string {
+  const url = raw.trim();
+  if (!url) return "";
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
 export type Palestra = {
   id: string;
   foto_url: string | string[] | null;
@@ -28,6 +52,8 @@ export type Palestra = {
   local: string | null;
   sobre_palestra: string | null;
   sobre_palestrante: string | null;
+  links: PalestraLink[] | null;
+  rascunho: boolean;
   created_at: string;
   updated_at: string;
 };
