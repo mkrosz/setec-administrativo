@@ -1,10 +1,10 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState } from "react";
-import { Camera, ChevronDown, Loader2, X } from "lucide-react";
+import { Camera, ChevronDown, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIAS, uploadFile, resolveUrl, type Palestra } from "@/lib/setec";
+import { CATEGORIAS, LINK_TYPES, normalizeUrl, uploadFile, resolveUrl,  type LinkType, type Palestra } from "@/lib/setec";
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
@@ -23,10 +23,17 @@ type ImageItem = {
   preview: string;
 };
 
+type LinkItem = {
+  id: string;
+  type: LinkType;
+  url: string;
+};
+
 export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [images, setImages] = useState<ImageItem[]>([]);
+  const [links, setLinks] = useState<LinkItem[]>([]);
 
   const [form, setForm] = useState({
     nome_completo: "",
@@ -56,6 +63,15 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
       sobre_palestra: palestra?.sobre_palestra ?? "",
       sobre_palestrante: palestra?.sobre_palestrante ?? "",
     });
+
+    const rawLinks = Array.isArray(palestra?.links) ? palestra.links : [];
+    setLinks(
+      rawLinks.map((l) => ({
+        id: crypto.randomUUID(),
+        type: l.type,
+        url: l.url ?? "",
+      }))
+    );
 
     const rawUrls: string[] = Array.isArray(palestra?.foto_url)
       ? palestra.foto_url
@@ -96,8 +112,33 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
     setImages((prev) => prev.filter((item) => item.id !== id));
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  function addLink() {
+    // O LinkedIn é sempre o tipo padrão de um novo link
+    setLinks((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), type: "linkedin", url: "" },
+    ]);
+  }
+
+  function updateLink(id: string, patch: Partial<Omit<LinkItem, "id">>) {
+    setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  }
+
+  function removeLink(id: string) {
+    setLinks((prev) => prev.filter((l) => l.id !== id));
+  }
+
+    function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    save(false);
+  }
+
+  async function save(asDraft: boolean) {
+    if (asDraft && !form.titulo.trim() && !form.nome_completo.trim()) {
+      toast.error("Preencha ao menos o título ou o nome para salvar o rascunho");
+      return;
+    }
+
     setSaving(true);
     try {
       const finalUrls: string[] = [];
@@ -111,17 +152,42 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
         }
       }
 
+      const cleanLinks = links
+        .map((l) => ({ type: l.type, url: normalizeUrl(l.url) }))
+        .filter((l) => l.url);
+
+      for (const l of cleanLinks) {
+        try {
+          new URL(l.url);
+        } catch {
+          throw new Error(`Link inválido: ${l.url}`);
+        }
+      }
+
+      // Data e horas só são guardadas se estiverem completas (o banco recusa valores pela metade)
+      const dataOk = /^\d{4}-\d{2}-\d{2}$/.test(form.data);
+      const horaOk = (h: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(h);
+      const inicioOk = horaOk(form.hora_inicio);
+      const fimOk = horaOk(form.hora_fim);
+
+      if (!asDraft) {
+        if (!dataOk) throw new Error("Informe a data completa (DD/MM/AAAA)");
+        if (!inicioOk || !fimOk) throw new Error("Informe horários válidos (HH:MM)");
+      }
+
       const payload = {
         ...form,
         cargo: form.cargo || null,
         categoria: form.categoria || null,
-        data: form.data || null,
-        hora_inicio: form.hora_inicio || null,
-        hora_fim: form.hora_fim || null,
+        data: dataOk ? form.data : null,
+        hora_inicio: inicioOk ? form.hora_inicio : null,
+        hora_fim: fimOk ? form.hora_fim : null,
         local: form.local || null,
         sobre_palestra: form.sobre_palestra || null,
         sobre_palestrante: form.sobre_palestrante || null,
         foto_url: finalUrls,
+        links: cleanLinks,
+        rascunho: asDraft,
       };
 
       const { error } = palestra
@@ -130,7 +196,17 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
 
       if (error) throw error;
 
-      toast.success(palestra ? "Palestra atualizada" : "Palestra cadastrada");
+      if (asDraft) {
+        const incompleto =
+          (form.data && !dataOk) ||
+          (form.hora_inicio && !inicioOk) ||
+          (form.hora_fim && !fimOk);
+        toast.success("Rascunho salvo");
+        if (incompleto) toast.info("Data ou horário incompletos não foram guardados no rascunho");
+      } else {
+        toast.success(palestra?.rascunho ? "Palestra publicada" : palestra ? "Palestra atualizada" : "Palestra cadastrada");
+      }
+
       onOpenChange(false);
       onSaved();
     } catch (err) {
@@ -147,10 +223,12 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(900px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="px-7 pb-4 pt-5">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
-              {palestra ? "Atualizar Palestra" : "Cadastrar Palestra"}
+              {palestra?.rascunho ? "Editar Rascunho" : palestra ? "Atualizar Palestra" : "Cadastrar Palestra"}
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-              {palestra
+              {palestra?.rascunho
+                ? "Complete as informações e publique, ou salve novamente como rascunho."
+                : palestra
                 ? "Ajuste os detalhes desta sessão do cronograma."
                 : "Preencha os detalhes da nova sessão para o cronograma."}
             </Dialog.Description>
@@ -353,13 +431,78 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <span className={label}>Links (redes sociais e sites)</span>
+
+              <div className="space-y-2">
+                {links.map((l) => (
+                  <div key={l.id} className="flex items-center gap-2">
+                    <div className="relative w-40 shrink-0">
+                      <select
+                        value={l.type}
+                        onChange={(e) => updateLink(l.id, { type: e.target.value as LinkType })}
+                        className={`${pill} appearance-none pr-9`}
+                      >
+                        {LINK_TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    </div>
+
+                    <input
+                      inputMode="url"
+                      value={l.url}
+                      onChange={(e) => updateLink(l.id, { url: e.target.value })}
+                      placeholder="https://..."
+                      className={`${pill} min-w-0 flex-1`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => removeLink(l.id)}
+                      aria-label="Remover link"
+                      title="Remover link"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-600/20 hover:text-red-400"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={addLink}
+                className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm font-medium text-foreground transition-colors hover:border-primary/60"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar
+              </button>
+            </div>
           </form>
 
           <div className="border-t border-border/60" />
-          <div className="flex items-center justify-end gap-6 px-7 py-4">
+          <div className="flex items-center justify-end gap-4 px-7 py-4">
             <Dialog.Close className="text-sm font-medium text-foreground/90 transition-opacity hover:opacity-70">
               Cancelar
             </Dialog.Close>
+
+            {/* Só aparece ao criar ou ao editar um rascunho; palestra já publicada não volta a rascunho */}
+            {(!palestra || palestra.rascunho) && (
+              <button
+                type="button"
+                onClick={() => save(true)}
+                disabled={saving}
+                className="flex h-11 items-center justify-center rounded-full border border-border/70 px-6 text-sm font-medium text-foreground transition-colors hover:border-primary/60 disabled:opacity-60"
+              >
+                {palestra?.rascunho ? "Salvar rascunho" : "Salvar como rascunho"}
+              </button>
+            )}
+
             <button
               type="submit"
               form="palestra-form"
@@ -367,7 +510,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
               className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {palestra ? "Atualizar" : "Salvar Palestra"}
+              {palestra?.rascunho ? "Publicar" : palestra ? "Atualizar" : "Salvar Palestra"}
             </button>
           </div>
         </Dialog.Content>

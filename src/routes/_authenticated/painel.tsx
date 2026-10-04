@@ -94,6 +94,7 @@ function Painel() {
   const [pgApoiadores, setPgApoiadores] = useState(1);
   const [pgAcessos, setPgAcessos] = useState(1);
   const importRef = useRef<HTMLInputElement>(null);
+  const [diaAtivo, setDiaAtivo] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const { isLight, toggle } = useTheme();
 
@@ -240,9 +241,58 @@ function Painel() {
   }
 
   const PAGE = 3;
-  const listaPalestras = palestras.data ?? [];
+
+  // Agrupa as palestras por data; palestras sem data ficam numa aba no final
+  const diasPalestras = useMemo(() => {
+  const map = new Map<string, Palestra[]>();
+  const rascunhos: Palestra[] = [];
+
+  for (const p of palestras.data ?? []) {
+    if (p.rascunho) {
+      rascunhos.push(p);
+      continue;
+    }
+    const key = p.data ?? "sem-data";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(p);
+  }
+
+  const dias = Array.from(map.entries())
+    .sort(([a], [b]) => {
+      if (a === "sem-data") return 1;
+      if (b === "sem-data") return -1;
+      return a.localeCompare(b);
+    })
+    .map(([key, items]) => ({
+      key,
+      label: key === "sem-data" ? "Sem data" : formatDia(key),
+      items: [...items].sort(
+        (a, b) =>
+          (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? "") ||
+          (a.hora_fim ?? "").localeCompare(b.hora_fim ?? ""),
+      ),
+    }));
+
+  if (rascunhos.length > 0) {
+    dias.push({
+      key: "rascunhos",
+      label: "Rascunhos",
+      items: rascunhos.sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
+    });
+  }
+
+  return dias;
+}, [palestras.data]);
+
+  // Se a aba ativa não existir mais (ou ainda não foi escolhida), usa a primeira
+  const diaSelecionado = diasPalestras.find((d) => d.key === diaAtivo) ?? diasPalestras[0];
+  const listaPalestras = diaSelecionado?.items ?? [];
   const totalPgPalestras = Math.max(1, Math.ceil(listaPalestras.length / PAGE));
-  const palestrasPagina = listaPalestras.slice((pgPalestras - 1) * PAGE, pgPalestras * PAGE);
+  const pgPalestrasAtual = Math.min(pgPalestras, totalPgPalestras);
+  const palestrasPagina = listaPalestras.slice(
+    (pgPalestrasAtual - 1) * PAGE,
+    pgPalestrasAtual * PAGE,
+  );
 
   const doNivel = useMemo(
     () => (patrocinadores.data ?? []).filter((p) => p.nivel === nivelAtivo),
@@ -466,25 +516,59 @@ function Painel() {
             Gerenciar Palestras
           </h2>
           <section className="panel-surface mt-5 p-7">
+            {diasPalestras.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-8 border-b border-border/40 pb-4">
+                {diasPalestras.map((d) => (
+                  <button
+                    key={d.key}
+                    onClick={() => {
+                      setDiaAtivo(d.key);
+                      setPgPalestras(1);
+                    }}
+                    className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                      diaSelecionado?.key === d.key
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground/80"
+                    }`}
+                  >
+                    {d.label}
+                    <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <ul className="divide-y divide-border/40">
               {palestrasPagina.map((p) => (
                 <li key={p.id} className="group flex items-center gap-4 py-4">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-muted-foreground">
                     <StorageImage
-                      path={p.foto_url}
+                      path={Array.isArray(p.foto_url) ? (p.foto_url[0] ?? null) : p.foto_url}
                       alt={p.nome_completo}
                       className="h-11 w-11 object-cover"
                       fallback={<>{initials(p.nome_completo)}</>}
                     />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-base text-foreground">{p.titulo}</p>
-                    <p className="truncate text-xs text-muted-foreground">{p.nome_completo}</p>
+                    <p className="flex items-center gap-2 truncate text-base text-foreground">
+                      <span className="truncate">{p.titulo || "(Sem título)"}</span>
+                      {p.rascunho && (
+                        <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                          Rascunho
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {p.nome_completo || "Palestrante não informado"}
+                    </p>
                   </div>
                   <div className="hidden text-right sm:block">
-                    <p className="text-sm font-semibold text-foreground">{formatDia(p.data)}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {p.data ? formatDia(p.data) : "Sem data"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatHora(p.hora_inicio)} - {formatHora(p.hora_fim)}
+                      {p.hora_inicio && p.hora_fim
+                        ? `${formatHora(p.hora_inicio)} - ${formatHora(p.hora_fim)}`
+                        : "Sem horário"}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -509,8 +593,17 @@ function Painel() {
                 </li>
               ))}
             </ul>
-            <Paginacao pagina={pgPalestras} totalPaginas={totalPgPalestras} onChange={setPgPalestras} />
-
+            {diasPalestras.length === 0 && (
+              <p className="py-4 text-sm text-muted-foreground">Nenhuma palestra cadastrada.</p>
+            )}
+            {totalPgPalestras > 1 && (
+            <Paginacao
+              pagina={pgPalestrasAtual}
+              totalPaginas={totalPgPalestras}
+              onChange={setPgPalestras}
+            />
+          )}
+          
             <button
               onClick={() => {
                 setPalestraEdit(null);

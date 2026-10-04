@@ -76,8 +76,11 @@ export async function exportarPDF() {
   y += 10;
 
   linha("Programação", 15, true);
-  if (dados.palestras.length === 0) linha("Nenhuma palestra cadastrada.");
-  for (const p of dados.palestras) {
+  const publicadas = dados.palestras.filter((p) => !p.rascunho);
+  const rascunhos = dados.palestras.filter((p) => p.rascunho);
+
+  if (publicadas.length === 0) linha("Nenhuma palestra cadastrada.");
+  for (const p of publicadas) {
     y += 6;
     linha(p.titulo, 12, true);
     linha(`${p.nome_completo}${p.cargo ? ` — ${p.cargo}` : ""}`, 10);
@@ -88,6 +91,11 @@ export async function exportarPDF() {
       10,
     );
     if (p.sobre_palestra) linha(p.sobre_palestra, 10);
+  }
+
+  if (rascunhos.length > 0) {
+     y += 6;
+    linha(`Rascunhos não publicados: ${rascunhos.length} (disponíveis no backup JSON)`, 10);
   }
 
   y += 16;
