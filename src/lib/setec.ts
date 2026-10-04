@@ -15,6 +15,23 @@ export const CATEGORIAS = [
   "Inovação",
 ];
 
+export const GRUPOS_COMISSAO = [
+  { value: "professor", label: "Professores" },
+  { value: "4ano", label: "4º ano" },
+  { value: "5ano", label: "5º ano" },
+] as const;
+
+export type GrupoComissao = (typeof GRUPOS_COMISSAO)[number]["value"];
+
+export type MembroComissao = {
+  id: string;
+  nome: string;
+  email: string | null;
+  grupo: GrupoComissao;
+  created_at: string;
+  updated_at: string;
+};
+
 export const LINK_TYPES = [
   { value: "linkedin", label: "LinkedIn" },
   { value: "site", label: "Site" },
