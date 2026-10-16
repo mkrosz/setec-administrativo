@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   CirclePlus,
   ChevronDown,
+  ClipboardCheck,
   Download,
   Eye,
   EyeOff,
@@ -435,6 +436,13 @@ function Painel() {
                 {eventoAtivo ? "Evento ativo" : "Evento oculto"}
               </button>
             </div>
+            <Link
+              to="/presenca"
+              className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Presença
+            </Link>
             <span className="h-7 w-px bg-border" />
             <button
               onClick={toggle}

@@ -173,3 +173,75 @@ export function formatHora(h: string | null) {
   if (!h) return "";
   return h.slice(0, 5);
 }
+
+/** Opção fixa para quem não pertence a nenhuma turma cadastrada. */
+export const TURMA_NA = "N/A";
+
+export type Turma = { id: string; nome: string; created_at: string };
+
+/** Ordena nomes de turma de forma natural ("2º ano" antes de "10º ano"). */
+export function compararTurmas(a: string, b: string) {
+  if (a === TURMA_NA) return 1;
+  if (b === TURMA_NA) return -1;
+  return a.localeCompare(b, "pt-BR", { numeric: true });
+}
+
+export type Presenca = {
+  id: string;
+  palestra_id: string;
+  qrcode_id: string | null;
+  nome_completo: string;
+  ra: string;
+  /** Nome da turma (ex.: "4º ano", "Logística", "N/A"). */
+  ano_turma: string;
+  origem: "qrcode" | "manual";
+  latitude: number | null;
+  longitude: number | null;
+  precisao_m: number | null;
+  localizacao: string | null;
+  registrado_em: string;
+  created_at: string;
+};
+
+export type PresencaQrCode = {
+  id: string;
+  palestra_id: string;
+  token: string;
+  expira_em: string;
+  encerrado: boolean;
+  created_at: string;
+};
+
+export function coordenadasPresenca(p: Presenca) {
+  if (p.latitude == null || p.longitude == null) return null;
+  const coords = `${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}`;
+  return p.precisao_m != null ? `${coords} (±${Math.round(p.precisao_m)} m)` : coords;
+}
+
+/** Texto do local de submissão: nome do local, coordenadas ou aviso. */
+export function formatLocalPresenca(p: Presenca) {
+  return p.localizacao || coordenadasPresenca(p) || "Localização não informada";
+}
+
+export function mapsUrl(p: Presenca) {
+  if (p.latitude == null || p.longitude == null) return null;
+  return `https://www.google.com/maps?q=${p.latitude},${p.longitude}`;
+}
+
+export function formatDataHora(iso: string) {
+  return new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/** Mensagem legível de erros do Supabase (PostgrestError nem sempre é instanceof Error). */
+export function mensagemErro(err: unknown, padrao = "Ocorreu um erro") {
+  if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
+    return err.message;
+  }
+  return padrao;
+}
