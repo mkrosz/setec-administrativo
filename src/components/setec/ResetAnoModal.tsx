@@ -16,11 +16,16 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { exportarJSON, exportarPDF } from "@/lib/backup";
+import {
+  apagarDadosDoAno,
+  criarPontoRestauracao,
+  exportarJSON,
+  exportarPDF,
+  registrarAtividade,
+} from "@/lib/backup";
 import { mensagemErro } from "@/lib/setec";
 
 const PALAVRA = "RESETAR";
-const TODOS = "00000000-0000-0000-0000-000000000000";
 
 type Props = {
   open: boolean;
@@ -32,14 +37,6 @@ async function contar(tabela: string) {
   const { count, error } = await supabase.from(tabela as any).select("id", { count: "exact", head: true });
   if (error) return 0;
   return count ?? 0;
-}
-
-/** Apaga todas as linhas de uma tabela, ignorando tabela inexistente. */
-async function apagarTudo(tabela: string) {
-  const { error } = await supabase.from(tabela as any).delete().neq("id", TODOS);
-  if (error && error.code !== "PGRST205" && error.code !== "42P01") {
-    throw new Error(`${tabela}: ${error.message}`);
-  }
 }
 
 /** Reset do ano: mostra o que será apagado e oferece backup (PDF + JSON) antes de apagar. */
@@ -104,11 +101,11 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
       }
       fase = "apagando";
       setEtapa("apagando");
+      // Cópia automática que a conta master pode restaurar depois
+      await criarPontoRestauracao("Antes do reset dos dados do ano");
       // Presenças/QR Codes e inscrições saem junto (ON DELETE CASCADE)
-      await apagarTudo("palestras");
-      await apagarTudo("minicursos");
-      await apagarTudo("patrocinadores");
-      await apagarTudo("comissao");
+      await apagarDadosDoAno();
+      await registrarAtividade("resetou", "Dados do ano");
       queryClient.invalidateQueries();
       toast.success("Dados do ano resetados", {
         description: comBackup ? "O PDF e o JSON do backup foram baixados." : undefined,

@@ -519,7 +519,11 @@ export function resumoBackup(d: Partial<BackupData>) {
 }
 
 export async function importarJSON(file: File) {
-  const dados = await lerBackup(file);
+  return importarDados(await lerBackup(file));
+}
+
+/** Restaura um backup já lido (arquivo JSON ou ponto de restauração). */
+export async function importarDados(dados: Partial<BackupData>) {
   const palestras = Array.isArray(dados.palestras) ? dados.palestras : [];
   const apoiadores = Array.isArray(dados.apoiadores) ? dados.apoiadores : [];
   const comissao = Array.isArray(dados.comissao) ? dados.comissao : [];
@@ -573,4 +577,74 @@ export async function importarJSON(file: File) {
     inscricoes: inscricoes.length,
     presencas: presencas.length,
   };
+}
+
+// ─── Reset, pontos de restauração e histórico ────────────────────────────────
+
+const TODOS = "00000000-0000-0000-0000-000000000000";
+
+/** Apaga todas as linhas de uma tabela, ignorando tabela inexistente (SQL não rodado). */
+async function apagarTudo(tabela: string) {
+  const { error } = await supabase.from(tabela as any).delete().neq("id", TODOS);
+  if (error && error.code !== "PGRST205" && error.code !== "42P01") {
+    throw new Error(`${tabela}: ${error.message}`);
+  }
+}
+
+/** Apaga os dados do ano (palestras com presenças e QR Codes, minicursos com inscrições, apoiadores e comissão). */
+export async function apagarDadosDoAno() {
+  await apagarTudo("palestras");
+  await apagarTudo("minicursos");
+  await apagarTudo("patrocinadores");
+  await apagarTudo("comissao");
+}
+
+const TABELA_INEXISTENTE = new Set(["PGRST205", "42P01", "PGRST202", "42883"]);
+
+/** Guarda uma cópia completa dos dados antes de uma ação que apaga ou substitui dados. */
+export async function criarPontoRestauracao(motivo: string) {
+  const dados = await coletarDados();
+  const { error } = await supabase.from("pontos_restauracao" as any).insert({
+    motivo,
+    resumo: resumoBackup(dados),
+    dados,
+  } as any);
+  if (error) {
+    // SQL dos recursos da master ainda não rodado: segue sem o ponto de restauração
+    if (TABELA_INEXISTENTE.has(error.code)) {
+      console.warn("[ponto de restauração] tabela inexistente", error);
+      return;
+    }
+    throw new Error(`Não foi possível criar o ponto de restauração: ${error.message}`);
+  }
+}
+
+export type PontoRestauracao = {
+  id: string;
+  criado_em: string;
+  criado_por_email: string | null;
+  motivo: string;
+  resumo: ReturnType<typeof resumoBackup> | null;
+};
+
+/** Volta os dados exatamente como estavam no ponto (os dados atuais viram outro ponto antes). */
+export async function restaurarPonto(ponto: PontoRestauracao) {
+  const { data, error } = await supabase
+    .from("pontos_restauracao" as any)
+    .select("dados")
+    .eq("id", ponto.id)
+    .single();
+  if (error) throw error;
+  const dados = (data as unknown as { dados: Partial<BackupData> }).dados;
+  const quando = new Date(ponto.criado_em).toLocaleString("pt-BR");
+  await criarPontoRestauracao(`Antes de restaurar o ponto de ${quando}`);
+  await apagarDadosDoAno();
+  await importarDados(dados);
+  await registrarAtividade("restaurou", `Ponto de ${quando} (${ponto.motivo})`);
+}
+
+/** Registra no histórico uma ação do painel; falhas não atrapalham a ação em si. */
+export async function registrarAtividade(acao: string, descricao: string) {
+  const { error } = await supabase.rpc("registrar_atividade" as any, { _acao: acao, _descricao: descricao } as any);
+  if (error) console.warn("[histórico]", error);
 }

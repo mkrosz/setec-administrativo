@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { obterPosicao, type Posicao } from "@/lib/geo";
-import { TURMA_NA, mensagemErro, type Palestra } from "@/lib/setec";
+import { TURMA_NA, formatDataHora, mensagemErro, type Palestra, type Presenca } from "@/lib/setec";
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
@@ -21,10 +21,12 @@ type Props = {
   palestra: Palestra | null;
   turmas: string[];
   onSaved: () => void;
+  /** Presença sendo corrigida: muda só nome, RA e turma (horário, local e origem ficam como estão). */
+  editando?: Presenca | null;
 };
 
-/** Inclusão manual de um aluno; registra a localização de quem está adicionando. */
-export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }: Props) {
+/** Inclusão manual de um aluno (registra a localização de quem adiciona) ou correção de uma presença. */
+export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved, editando = null }: Props) {
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState("");
   const [ra, setRa] = useState("");
@@ -45,10 +47,16 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
 
   useEffect(() => {
     if (!open) return;
+    if (editando) {
+      setNome(editando.nome_completo);
+      setRa(editando.ra);
+      setTurma(editando.ano_turma);
+      return; // a localização original é mantida
+    }
     setNome("");
     setRa("");
     buscarLocal();
-  }, [open, buscarLocal]);
+  }, [open, editando, buscarLocal]);
 
   async function save(keepOpen: boolean) {
     if (!palestra) return;
@@ -67,6 +75,24 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
     }
 
     setSaving(true);
+    if (editando) {
+      // Só os dados digitados: horário, localização e origem (QR Code / manual) não mudam
+      const { error } = await supabase
+        .from("presencas" as any)
+        .update({ nome_completo: nomeLimpo, ra, ano_turma: turma } as any)
+        .eq("id", editando.id);
+      setSaving(false);
+      if (error) {
+        toast.error(
+          error.code === "23505" ? "Este RA já está na lista desta palestra" : mensagemErro(error, "Erro ao salvar"),
+        );
+        return;
+      }
+      toast.success("Dados do aluno corrigidos");
+      onSaved();
+      onOpenChange(false);
+      return;
+    }
     try {
       const posicao = local.status === "ok" ? local.posicao : null;
       const { error } = await supabase.from("presencas" as any).insert({
@@ -106,7 +132,7 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(520px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="px-7 pb-4 pt-5">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
-              Adicionar aluno
+              {editando ? "Editar aluno" : "Adicionar aluno"}
             </Dialog.Title>
             <Dialog.Description className="mt-1 truncate text-sm text-muted-foreground">
               {palestra?.titulo ?? "Palestra"}
@@ -150,10 +176,22 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
 
             <div className="space-y-1.5">
               <span className={label}>Turma</span>
-              <TurmaSelect turmas={turmas} value={turma} onChange={setTurma} />
+              <TurmaSelect
+                turmas={editando && turma && !turmas.includes(turma) ? [...turmas, turma] : turmas}
+                value={turma}
+                onChange={setTurma}
+              />
             </div>
 
-            <LocalStatus estado={local} onRetry={buscarLocal} />
+            {editando ? (
+              <p className="rounded-2xl border border-border/60 bg-field/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                Registrado em <strong className="text-foreground">{formatDataHora(editando.registrado_em)}</strong>
+                {editando.origem === "manual" ? " (manual)" : " pelo QR Code"}. O horário, a localização e a origem do
+                registro continuam os mesmos.
+              </p>
+            ) : (
+              <LocalStatus estado={local} onRetry={buscarLocal} />
+            )}
           </form>
 
           <div className="border-t border-border/60" />
@@ -161,6 +199,7 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
             <Dialog.Close className="text-sm font-medium text-foreground/90 transition-opacity hover:opacity-70">
               Cancelar
             </Dialog.Close>
+            {!editando && (
             <button
               type="button"
               onClick={() => save(true)}
@@ -169,6 +208,7 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
             >
               Salvar e adicionar outro
             </button>
+            )}
             <button
               type="submit"
               form="presenca-form"
@@ -176,7 +216,7 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
               className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Salvar
+              {editando ? "Salvar alterações" : "Salvar"}
             </button>
           </div>
         </Dialog.Content>

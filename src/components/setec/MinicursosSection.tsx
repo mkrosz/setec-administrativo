@@ -7,11 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { AvataresPessoas } from "@/components/setec/AvataresPessoas";
 import { useConfirmar } from "@/components/setec/ConfirmDialog";
 import { InscritosMinicursoModal } from "@/components/setec/InscritosMinicursoModal";
+import { Travado } from "@/components/setec/Travado";
 import { Paginacao } from "@/components/setec/Paginacao";
 import { PalestraModal } from "@/components/setec/PalestraModal";
 import { formatDia, formatHora, mensagemErro, type Minicurso } from "@/lib/setec";
 
-const POR_PAGINA = 5;
 
 /** Minicursos do painel (compartilhado entre a aba e o contador da aba). */
 export function useMinicursos() {
@@ -29,13 +29,26 @@ export function useMinicursos() {
   });
 }
 
-/** Conteúdo da aba "Minicursos" do painel: lista, cadastro/edição e lista de inscritos. */
-export function MinicursosSection() {
+/**
+ * Conteúdo da aba "Minicursos" do painel: lista, cadastro/edição e lista de inscritos.
+ * O painel separa os minicursos por dia (e rascunhos) e controla a paginação, igual às palestras.
+ */
+export function MinicursosSection({
+  lista,
+  pagina,
+  porPagina,
+  onPagina,
+}: {
+  /** Minicursos do dia (ou aba de rascunhos) selecionado. */
+  lista: Minicurso[];
+  pagina: number;
+  porPagina: number;
+  onPagina: (p: number) => void;
+}) {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Minicurso | null>(null);
   const [inscritosDe, setInscritosDe] = useState<Minicurso | null>(null);
-  const [pagina, setPagina] = useState(1);
 
   const minicursos = useMinicursos();
 
@@ -55,10 +68,9 @@ export function MinicursosSection() {
     return mapa;
   }, [inscricoes.data]);
 
-  const lista = minicursos.data ?? [];
-  const totalPaginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
   const paginaAtual = Math.min(pagina, totalPaginas);
-  const visiveis = lista.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
+  const visiveis = lista.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
 
   const [dialogoConfirmar, confirmar] = useConfirmar();
 
@@ -145,6 +157,7 @@ export function MinicursosSection() {
                     </span>
                     <span className="hidden md:inline">{esgotado ? "esgotado" : "inscritos"}</span>
                   </button>
+                  <Travado>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                     <button
                       aria-label="Editar minicurso"
@@ -164,6 +177,7 @@ export function MinicursosSection() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
+                  </Travado>
                 </li>
               );
             })}
@@ -173,8 +187,9 @@ export function MinicursosSection() {
         {!minicursos.isError && !minicursos.isLoading && lista.length === 0 && (
           <p className="py-4 text-sm text-muted-foreground">Nenhum minicurso cadastrado.</p>
         )}
-        <Paginacao pagina={paginaAtual} totalPaginas={totalPaginas} onChange={setPagina} />
+        <Paginacao pagina={paginaAtual} totalPaginas={totalPaginas} onChange={onPagina} />
 
+        <Travado>
         <button
           onClick={() => {
             setEditando(null);
@@ -185,6 +200,7 @@ export function MinicursosSection() {
           <CirclePlus className="h-5 w-5" />
           Adicionar minicurso
         </button>
+        </Travado>
 
       <PalestraModal
         tipo="minicurso"

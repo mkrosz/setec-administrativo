@@ -1,7 +1,20 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, FileText, Loader2, MailCheck, MailWarning, MailX, RotateCw, Search, Trash2, UserPlus, X } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  Loader2,
+  MailCheck,
+  MailWarning,
+  MailX,
+  Pencil,
+  RotateCw,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +36,20 @@ import {
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
+
+type Dados = { nome: string; ra: string; email: string; turma: string };
+
+/** Limpa e valida os dados digitados; devolve a mensagem de erro ou os dados prontos para salvar. */
+function validar(d: Dados): { erro: string } | { nome: string; ra: string; email: string; turma: string } {
+  const nome = d.nome.trim().replace(/\s+/g, " ");
+  const ra = d.ra.replace(/\D/g, "");
+  const email = d.email.trim().toLowerCase();
+  if (nome.length < 3 || !nome.includes(" ")) return { erro: "Informe o nome completo" };
+  if (!/^\d{5,20}$/.test(ra)) return { erro: "RA inválido. Use apenas números (5 a 20 dígitos)." };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erro: "Informe um e-mail válido" };
+  if (!d.turma) return { erro: "Selecione a turma" };
+  return { nome, ra, email, turma: d.turma };
+}
 
 type Props = {
   /** Minicurso aberto; null fecha o modal. */
@@ -99,44 +126,14 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
   async function adicionar(e: React.FormEvent) {
     e.preventDefault();
     if (!minicurso) return;
-    const nome = novo.nome.trim().replace(/\s+/g, " ");
-    const ra = novo.ra.replace(/\D/g, "");
-    let email = novo.email.trim().toLowerCase();
-    const erro =
-      nome.length < 3 || !nome.includes(" ")
-        ? "Informe o nome completo"
-        : !/^\d{5,20}$/.test(ra)
-          ? "RA inválido. Use apenas números (5 a 20 dígitos)."
-          : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
-            ? "Informe um e-mail válido"
-            : !novo.turma
-              ? "Selecione a turma"
-              : null;
-    if (erro) {
-      toast.error(erro);
+    const v = validar(novo);
+    if ("erro" in v) {
+      toast.error(v.erro);
       return;
     }
-
-    // Domínio parecido com um comum (ex.: gmqil.com): pode existir e entregar o e-mail a um estranho
-    const sugestao = sugerirEmail(email);
-    if (sugestao) {
-      const corrigir = await confirmar({
-        tom: "aviso",
-        titulo: "Confira o e-mail",
-        descricao: (
-          <>
-            <strong className="text-foreground">{email}</strong> parece ter um erro de digitação. Você quis dizer{" "}
-            <strong className="text-foreground">{sugestao}</strong>?
-          </>
-        ),
-        confirmar: `Usar ${sugestao.split("@")[1]}`,
-        cancelar: "Manter como está",
-      });
-      if (corrigir) {
-        email = sugestao;
-        setNovo((n) => ({ ...n, email: sugestao }));
-      }
-    }
+    const { nome, ra } = v;
+    const email = await conferirEmail(v.email);
+    if (email !== v.email) setNovo((n) => ({ ...n, email }));
 
     if (
       esgotado &&
@@ -179,6 +176,75 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
     }
   }
 
+  /** Domínio parecido com um comum (ex.: gmqil.com): pode existir e entregar o e-mail a um estranho. */
+  async function conferirEmail(email: string) {
+    const sugestao = sugerirEmail(email);
+    if (!sugestao) return email;
+    const corrigir = await confirmar({
+      tom: "aviso",
+      titulo: "Confira o e-mail",
+      descricao: (
+        <>
+          <strong className="text-foreground">{email}</strong> parece ter um erro de digitação. Você quis dizer{" "}
+          <strong className="text-foreground">{sugestao}</strong>?
+        </>
+      ),
+      confirmar: `Usar ${sugestao.split("@")[1]}`,
+      cancelar: "Manter como está",
+    });
+    return corrigir ? sugestao : email;
+  }
+
+  // Correção de uma inscrição (nome, RA, e-mail e turma); data de inscrição e origem não mudam
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edicao, setEdicao] = useState<Dados>({ nome: "", ra: "", email: "", turma: "" });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
+  function editar(i: InscricaoMinicurso) {
+    setEditId(i.id);
+    setEdicao({ nome: i.nome_completo, ra: i.ra, email: i.email, turma: i.turma });
+  }
+
+  async function salvarEdicao(i: InscricaoMinicurso) {
+    const v = validar(edicao);
+    if ("erro" in v) {
+      toast.error(v.erro);
+      return;
+    }
+    const email = await conferirEmail(v.email);
+    setSalvandoEdicao(true);
+    const { error } = await supabase
+      .from("minicurso_inscricoes" as any)
+      .update({ nome_completo: v.nome, ra: v.ra, email, turma: v.turma } as any)
+      .eq("id", i.id);
+    setSalvandoEdicao(false);
+    if (error) {
+      toast.error(
+        error.code === "23505" ? "Este RA já está inscrito neste minicurso" : mensagemErro(error, "Erro ao salvar"),
+      );
+      return;
+    }
+    setEditId(null);
+    atualizar();
+    toast.success("Inscrição corrigida");
+    // E-mail trocado: oferece mandar a confirmação para o endereço certo
+    if (email !== i.email.toLowerCase()) {
+      const enviar = await confirmar({
+        tom: "neutro",
+        titulo: "Enviar confirmação para o novo e-mail?",
+        descricao: (
+          <>
+            O e-mail de confirmação da inscrição foi para <strong className="text-foreground">{i.email}</strong>.
+            Enviar agora para <strong className="text-foreground">{email}</strong>?
+          </>
+        ),
+        confirmar: "Enviar",
+        cancelar: "Agora não",
+      });
+      if (enviar) await reenviar({ ...i, email });
+    }
+  }
+
   async function reenviar(i: InscricaoMinicurso) {
     const { error } = await supabase.rpc("reenviar_email_inscricao" as any, { _id: i.id } as any);
     if (error) {
@@ -218,13 +284,22 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
         if (!v) {
           setBusca("");
           setAdicionando(false);
+          setEditId(null);
         }
         onOpenChange(v);
       }}
     >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1000px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
+        <Dialog.Content
+          // Esc com uma linha em edição cancela só a edição, sem fechar a lista
+          onEscapeKeyDown={(e) => {
+            if (editId) {
+              e.preventDefault();
+              setEditId(null);
+            }
+          }}
+          className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1000px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="flex items-start justify-between gap-4 px-7 pb-4 pt-5">
             <div className="min-w-0">
               <Dialog.Title className="font-display text-2xl font-bold text-foreground">
@@ -399,13 +474,104 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
                     <th className="hidden py-2.5 pr-3 font-medium md:table-cell">E-mail</th>
                     <th className="py-2.5 pr-3 font-medium">Turma</th>
                     <th className="hidden py-2.5 pr-3 font-medium lg:table-cell">Inscrito em</th>
-                    <th className="w-10">
+                    <th className="w-20">
                       <span className="sr-only">Ações</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
-                  {filtrados.map((i) => (
+                  {filtrados.map((i) =>
+                    editId === i.id ? (
+                      <tr key={i.id} className="bg-primary/5">
+                        <td colSpan={7} className="py-3">
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              salvarEdicao(i);
+                            }}
+                            className="grid gap-3 rounded-2xl border border-primary/40 bg-field/40 p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_1.3fr_0.9fr]"
+                          >
+                            <div className="space-y-1.5">
+                              <span className={label}>Nome completo</span>
+                              <input
+                                autoFocus
+                                maxLength={160}
+                                value={edicao.nome}
+                                onChange={(e) => setEdicao({ ...edicao, nome: e.target.value })}
+                                className={pill}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <span className={label}>RA</span>
+                              <input
+                                inputMode="numeric"
+                                maxLength={20}
+                                value={edicao.ra}
+                                onChange={(e) => setEdicao({ ...edicao, ra: e.target.value.replace(/\D/g, "") })}
+                                className={pill}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <span className={label}>E-mail</span>
+                              <input
+                                type="email"
+                                maxLength={160}
+                                value={edicao.email}
+                                onChange={(e) => setEdicao({ ...edicao, email: e.target.value })}
+                                className={pill}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <span className={label}>Turma</span>
+                              <div className="relative">
+                                <select
+                                  value={edicao.turma}
+                                  onChange={(e) => setEdicao({ ...edicao, turma: e.target.value })}
+                                  className={`${pill} appearance-none pr-9`}
+                                >
+                                  {/* turma que não existe mais continua aparecendo para não perder o dado */}
+                                  {edicao.turma &&
+                                    edicao.turma !== TURMA_NA &&
+                                    !(turmas.data ?? []).some((t) => t.nome === edicao.turma) && (
+                                      <option value={edicao.turma}>{edicao.turma}</option>
+                                    )}
+                                  {(turmas.data ?? []).map((t) => (
+                                    <option key={t.id} value={t.nome}>
+                                      {t.nome}
+                                    </option>
+                                  ))}
+                                  <option value={TURMA_NA}>{TURMA_NA}</option>
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-4">
+                              <p className="text-xs text-muted-foreground">
+                                Inscrito em {formatDataHora(i.created_at)}
+                                {i.origem === "manual" ? " (manual)" : " pelo site"}. A data da inscrição não muda.
+                              </p>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditId(null)}
+                                  className="h-10 px-3 text-sm font-medium text-foreground/90 hover:opacity-70"
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  type="submit"
+                                  disabled={salvandoEdicao}
+                                  className="flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
+                                >
+                                  {salvandoEdicao && <Loader2 className="h-4 w-4 animate-spin" />}
+                                  Salvar alterações
+                                </button>
+                              </div>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    ) : (
                     <tr key={i.id} className="group">
                       <td className="py-3 pr-3 tabular-nums text-muted-foreground">{lista.indexOf(i) + 1}</td>
                       <td className="py-3 pr-3 text-foreground">
@@ -431,16 +597,27 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
                         {formatDataHora(i.created_at)}
                       </td>
                       <td className="py-3 text-right">
-                        <button
-                          aria-label={`Remover ${i.nome_completo}`}
-                          onClick={() => remover(i)}
-                          className="rounded-full p-2 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/15 hover:text-destructive focus:opacity-100 group-hover:opacity-100"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                          <button
+                            aria-label={`Editar ${i.nome_completo}`}
+                            title="Corrigir nome, RA, e-mail ou turma"
+                            onClick={() => editar(i)}
+                            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            aria-label={`Remover ${i.nome_completo}`}
+                            onClick={() => remover(i)}
+                            className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                    ),
+                  )}
                 </tbody>
               </table>
             )}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
@@ -20,6 +20,7 @@ import {
   QrCode,
   Search,
   Sun,
+  Pencil,
   Trash2,
   UserCheck,
   UserPlus,
@@ -74,6 +75,15 @@ export const Route = createFileRoute("/_authenticated/presenca")({
       { property: "og:type", content: "website" },
     ],
   }),
+  // Lista de presença: só master e administradores (usuário comum volta para o painel)
+  beforeLoad: async ({ context }) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", context.user.id)
+      .maybeSingle();
+    if (data?.role !== "admin") throw redirect({ to: "/painel" });
+  },
   component: PresencaPage,
 });
 
@@ -137,6 +147,7 @@ function PresencaPage() {
   const porPagina = usePorPagina();
   const [busca, setBusca] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
+  const [presencaEdit, setPresencaEdit] = useState<Presenca | null>(null);
   const [turmasOpen, setTurmasOpen] = useState(false);
   const [projetar, setProjetar] = useState(false);
   const [ativando, setAtivando] = useState(false);
@@ -763,13 +774,26 @@ function PresencaPage() {
                             <LocalCell p={p} />
                           </td>
                           <td className="px-2 py-3">
+                            <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                            <button
+                              aria-label={`Editar ${p.nome_completo}`}
+                              title="Corrigir nome, RA ou turma"
+                              onClick={() => {
+                                setPresencaEdit(p);
+                                setManualOpen(true);
+                              }}
+                              className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
                             <button
                               aria-label="Remover presença"
                               onClick={() => removerPresenca(p)}
-                              className="rounded-full p-2 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/15 hover:text-destructive group-hover:opacity-100"
+                              className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -797,7 +821,11 @@ function PresencaPage() {
       {dialogoConfirmar}
       <PresencaModal
         open={manualOpen}
-        onOpenChange={setManualOpen}
+        onOpenChange={(v) => {
+          setManualOpen(v);
+          if (!v) setPresencaEdit(null);
+        }}
+        editando={presencaEdit}
         palestra={palestraSelecionada}
         turmas={nomesTurmas}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ["presencas"] })}

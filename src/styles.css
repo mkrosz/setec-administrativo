@@ -176,3 +176,14 @@
   background: color-mix(in oklab, var(--primary-glow) 85%, transparent);
   background-clip: padding-box;
 }
+
+/* Painel congelado: controles de edição escuros e sem interação (ver Travado.tsx) */
+.painel-travado {
+  display: contents;
+}
+.painel-travado > * {
+  opacity: 0.32;
+  filter: grayscale(0.85);
+  pointer-events: none;
+  user-select: none;
+}

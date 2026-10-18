@@ -26,6 +26,11 @@ import {
   UserRound,
   UserX,
   Users,
+  KeyRound,
+  Lock,
+  Snowflake,
+  X,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,7 +47,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportarJSON, exportarPDF, importarJSON, lerBackup, resumoBackup } from "@/lib/backup";
+import {
+  criarPontoRestauracao,
+  exportarJSON,
+  exportarPDF,
+  importarJSON,
+  lerBackup,
+  registrarAtividade,
+  resumoBackup,
+} from "@/lib/backup";
+import { MasterSection } from "@/components/setec/MasterSection";
+import { CongeladoContext, Travado } from "@/components/setec/Travado";
 import {
   NIVEIS,
   GRUPOS_COMISSAO,
@@ -72,7 +87,20 @@ import { AvataresPessoas } from "@/components/setec/AvataresPessoas";
 import { MinicursosSection, useMinicursos } from "@/components/setec/MinicursosSection";
 
 type AppRole = "admin" | "user";
-type Profile = { id: string; email: string; role: AppRole; ativo: boolean; created_at: string };
+type Profile = {
+  id: string;
+  email: string;
+  role: AppRole;
+  ativo: boolean;
+  created_at: string;
+  /** Conta master: ninguém pode alterar, desativar ou excluir (travada também no banco). */
+  master?: boolean;
+  /** Acesso total temporário concedido pela master (até essa data). */
+  acesso_total_ate?: string | null;
+};
+
+const temAcessoTemporario = (c: Profile) =>
+  !!c.acesso_total_ate && new Date(c.acesso_total_ate).getTime() > Date.now();
 
 
 export const Route = createFileRoute("/_authenticated/painel")({
@@ -122,6 +150,8 @@ function Painel() {
   const [pgAcessos, setPgAcessos] = useState(1);
   const importRef = useRef<HTMLInputElement>(null);
   const [diaAtivo, setDiaAtivo] = useState<string | null>(null);
+  const [diaMinicurso, setDiaMinicurso] = useState<string | null>(null);
+  const [pgMinicursos, setPgMinicursos] = useState(1);
   const [ocupado, setOcupado] = useState(false);
   const [comissaoOpen, setComissaoOpen] = useState(false);
   const [comissaoEdit, setComissaoEdit] = useState<MembroComissao | null>(null);
@@ -176,11 +206,45 @@ function Painel() {
       return (data ?? null) as Profile | null;
     },
   });
+  // Níveis (as mesmas regras valem no banco):
+  // - master: tudo
+  // - acesso total temporário: Controle de Acessos completo, redefinição de senha e edita com o painel congelado
+  // - administrador: tudo, mas no Controle de Acessos só libera contas novas (como usuário comum)
+  // - usuário comum: sem Controle de Acessos, presença, reset, importação e ativar/desativar evento
   const isAdmin = meuPerfil.data?.role === "admin";
+  const isMaster = !!meuPerfil.data?.master;
+  const acessoTotal = isMaster || (!!meuPerfil.data && temAcessoTemporario(meuPerfil.data));
+  const veAcessos = isAdmin || acessoTotal;
+
+  const controlePainel = useQuery({
+    queryKey: ["painel_controle"],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("painel_controle" as any)
+        .select("congelado")
+        .maybeSingle();
+      if (error) return { congelado: false }; // SQL dos recursos da master ainda não rodado
+      return (data ?? { congelado: false }) as unknown as { congelado: boolean };
+    },
+  });
+  const congelado = !!controlePainel.data?.congelado;
+  const bloqueadoPorCongelamento = congelado && !acessoTotal;
+
+  const ultimosAcessos = useQuery({
+    queryKey: ["ultimos_acessos"],
+    enabled: isMaster,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("ultimos_acessos" as any);
+      if (error) return new Map<string, string | null>();
+      const linhas = (data ?? []) as unknown as { id: string; ultimo_acesso: string | null }[];
+      return new Map(linhas.map((l) => [l.id, l.ultimo_acesso]));
+    },
+  });
 
   const acessos = useQuery({
     queryKey: ["profiles"],
-    enabled: isAdmin,
+    enabled: veAcessos,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -206,13 +270,77 @@ function Painel() {
   const removerConta = useServerFn(removerAcesso);
 
   async function atualizarAcesso(id: string, patch: { role?: AppRole; ativo?: boolean }) {
-    const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+    const { data, error } = await supabase.from("profiles").update(patch).eq("id", id).select("id");
+    if (error) {
+      toast.error(mensagemErro(error));
+      return;
+    }
+    // Sem linha alterada = o banco recusou pelas regras de acesso (o Supabase não devolve erro nesse caso)
+    if (!data?.length) {
+      toast.error("Você não tem permissão para alterar esta conta.");
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    toast.success("Acesso atualizado");
+  }
+
+  async function enviarRedefinicao(email: string) {
+    const ok = await confirmar({
+      tom: "neutro",
+      titulo: "Enviar redefinição de senha",
+      descricao: (
+        <>
+          <strong className="text-foreground">{email}</strong> recebe um e-mail com o link para criar uma nova senha.
+          A senha atual continua valendo até ela ser trocada.
+        </>
+      ),
+      confirmar: "Enviar e-mail",
+    });
+    if (!ok) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error(mensagemErro(error));
+      return;
+    }
+    await registrarAtividade("enviou redefinição de senha", email);
+    toast.success("E-mail de redefinição enviado");
+  }
+
+  async function concederAcessoTotal(c: Profile, horas: number) {
+    const prazo = horas < 24 ? `${horas} hora${horas > 1 ? "s" : ""}` : `${horas / 24} dia${horas > 24 ? "s" : ""}`;
+    const ok = await confirmar({
+      tom: "aviso",
+      titulo: "Conceder acesso total temporário",
+      descricao: (
+        <>
+          Por <strong className="text-foreground">{prazo}</strong>, {c.email} poderá mudar o nível das contas,
+          liberar, desativar e excluir contas, enviar redefinição de senha e editar o painel mesmo congelado. Você
+          pode retirar o acesso antes do prazo.
+        </>
+      ),
+      confirmar: "Conceder",
+    });
+    if (!ok) return;
+    const { error } = await supabase.rpc("conceder_acesso_total" as any, { _user_id: c.id, _horas: horas } as any);
     if (error) {
       toast.error(mensagemErro(error));
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["profiles"] });
-    toast.success("Acesso atualizado");
+    toast.success(`Acesso total concedido por ${prazo}`);
+  }
+
+  async function revogarAcessoTotal(c: Profile) {
+    const { error } = await supabase.rpc("revogar_acesso_total" as any, { _user_id: c.id } as any);
+    if (error) {
+      toast.error(mensagemErro(error));
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    toast.success("Acesso total retirado");
   }
 
   async function excluirAcesso(id: string, email: string) {
@@ -340,47 +468,10 @@ function Painel() {
   const apoiadoresRef = useRef<HTMLDivElement>(null);
   const porPaginaApoiadores = useCabemNaLinha(apoiadoresRef, LOGO_LARGURA, LOGO_GAP);
 
-  // Agrupa as palestras por data; palestras sem data ficam numa aba no final
-  const diasPalestras = useMemo(() => {
-  const map = new Map<string, Palestra[]>();
-  const rascunhos: Palestra[] = [];
-
-  for (const p of palestras.data ?? []) {
-    if (p.rascunho) {
-      rascunhos.push(p);
-      continue;
-    }
-    const key = p.data ?? "sem-data";
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(p);
-  }
-
-  const dias = Array.from(map.entries())
-    .sort(([a], [b]) => {
-      if (a === "sem-data") return 1;
-      if (b === "sem-data") return -1;
-      return a.localeCompare(b);
-    })
-    .map(([key, items]) => ({
-      key,
-      label: key === "sem-data" ? "Sem data" : formatDia(key),
-      items: [...items].sort(
-        (a, b) =>
-          (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? "") ||
-          (a.hora_fim ?? "").localeCompare(b.hora_fim ?? ""),
-      ),
-    }));
-
-  if (rascunhos.length > 0) {
-    dias.push({
-      key: "rascunhos",
-      label: "Rascunhos",
-      items: rascunhos.sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
-    });
-  }
-
-  return dias;
-}, [palestras.data]);
+  // Agrupa por data (sem data numa aba no fim, rascunhos em "Rascunhos")
+  const diasPalestras = useMemo(() => agruparPorDia(palestras.data ?? []), [palestras.data]);
+  const diasMinicursos = useMemo(() => agruparPorDia(minicursosQuery.data ?? []), [minicursosQuery.data]);
+  const diaMinicursoSelecionado = diasMinicursos.find((d) => d.key === diaMinicurso) ?? diasMinicursos[0];
 
   // Se a aba ativa não existir mais (ou ainda não foi escolhida), usa a primeira
   const diaSelecionado = diasPalestras.find((d) => d.key === diaAtivo) ?? diasPalestras[0];
@@ -415,7 +506,12 @@ function Painel() {
     pgApoiadoresAtual * porPaginaApoiadores,
   );
 
-  const listaAcessos = acessos.data ?? [];
+  // Conta master primeiro, depois a conta logada, depois as demais em ordem alfabética
+  const meuId = meuPerfil.data?.id;
+  const peso = (c: Profile) => (c.master ? 0 : c.id === meuId ? 1 : 2);
+  const listaAcessos = [...(acessos.data ?? [])].sort(
+    (a, b) => peso(a) - peso(b) || a.email.localeCompare(b.email, "pt-BR", { sensitivity: "base" }),
+  );
   const totalPgAcessos = Math.max(1, Math.ceil(listaAcessos.length / PAGE));
   const acessosPagina = listaAcessos.slice((pgAcessos - 1) * PAGE, pgAcessos * PAGE);
 
@@ -474,17 +570,23 @@ function Painel() {
     });
     if (!ok) return;
     await comEspera(async () => {
+      // Cópia automática que a conta master pode restaurar depois
+      await criarPontoRestauracao(`Antes de importar ${file.name}`);
       await importarJSON(file);
+      await registrarAtividade("importou", file.name);
       queryClient.invalidateQueries();
     }, "Dados importados");
   }
 
   return (
     <>
+      <CongeladoContext.Provider value={bloqueadoPorCongelamento}>
       <main className="relative min-h-screen overflow-hidden bg-background px-6 pb-24 pt-8 md:px-16">
         <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
           <SetecLogo />
           <div className="flex flex-wrap items-center gap-3">
+            {isAdmin && (
+            <Travado>
             <button
               onClick={() => setResetOpen(true)}
               className="flex h-10 items-center gap-2 rounded-full border border-destructive/60 px-5 text-sm text-destructive transition-colors hover:bg-destructive/10"
@@ -492,6 +594,8 @@ function Painel() {
               <RotateCcw className="h-4 w-4" />
               Resetar dados do ano
             </button>
+            </Travado>
+            )}
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -504,11 +608,17 @@ function Painel() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-42.5">
-                  <DropdownMenuItem onClick={() => comEspera(exportarPDF, "PDF gerado")}>
+                  <DropdownMenuItem onClick={() => comEspera(async () => {
+                        await exportarPDF();
+                        await registrarAtividade("exportou", "PDF");
+                      }, "PDF gerado")}>
                     <FileText className="mr-2 h-4 w-4" />
                     Apenas PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => comEspera(exportarJSON, "JSON exportado")}>
+                  <DropdownMenuItem onClick={() => comEspera(async () => {
+                        await exportarJSON();
+                        await registrarAtividade("exportou", "JSON");
+                      }, "JSON exportado")}>
                     <Download className="mr-2 h-4 w-4" />
                     Apenas JSON
                   </DropdownMenuItem>
@@ -517,6 +627,7 @@ function Painel() {
                       comEspera(async () => {
                         await exportarPDF();
                         await exportarJSON();
+                        await registrarAtividade("exportou", "PDF e JSON");
                       }, "Exportação concluída")
                     }
                   >
@@ -525,6 +636,8 @@ function Painel() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {isAdmin && (
+              <Travado>
               <button
                 onClick={() => importRef.current?.click()}
                 disabled={ocupado}
@@ -543,6 +656,10 @@ function Painel() {
                   e.target.value = "";
                 }}
               />
+              </Travado>
+              )}
+              {isAdmin ? (
+              <Travado>
               <button
                 onClick={() => updateConfig({ evento_ativo: !eventoAtivo })}
                 className={`flex h-10 items-center gap-2 rounded-full px-5 text-sm transition-colors ${
@@ -554,7 +671,18 @@ function Painel() {
                 {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 {eventoAtivo ? "Evento ativo" : "Evento oculto"}
               </button>
+              </Travado>
+              ) : (
+                <span
+                  title="Apenas administradores podem ativar ou desativar o evento"
+                  className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground"
+                >
+                  {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {eventoAtivo ? "Evento ativo" : "Evento oculto"}
+                </span>
+              )}
             </div>
+            {isAdmin && (
             <Link
               to="/presenca"
               className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
@@ -562,6 +690,7 @@ function Painel() {
               <ClipboardCheck className="h-4 w-4" />
               Presença
             </Link>
+            )}
             <span className="h-7 w-px bg-border" />
             <button
               onClick={toggle}
@@ -587,6 +716,18 @@ function Painel() {
           </div>
         </header>
 
+        {congelado && (
+          <div
+            role="status"
+            className="relative mx-auto mt-8 flex max-w-290 items-center gap-3 rounded-2xl border border-sky-400/30 bg-sky-400/10 px-5 py-3.5 text-sm text-sky-200 [.light_&]:text-sky-800"
+          >
+            <Snowflake className="h-4 w-4 shrink-0" />
+            {bloqueadoPorCongelamento
+              ? "O painel está congelado pela conta master: no momento só é possível visualizar."
+              : "O painel está congelado: só você (e quem tem acesso total) pode editar agora."}
+          </div>
+        )}
+
         <div className="relative mx-auto mt-14 max-w-290">
           <h1 className="title-gradient font-display text-6xl font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
             Painel
@@ -606,6 +747,7 @@ function Painel() {
           <section className="panel-surface mt-5 p-7">
             <StatusConsulta consulta={config} nome="as informações do evento" />
             <span className="text-xs text-muted-foreground">Logo do Evento</span>
+            <Travado>
             <div className="mt-3 flex flex-col gap-5 lg:flex-row">
               <button
                 onClick={() => logoRef.current?.click()}
@@ -665,6 +807,7 @@ function Painel() {
                 />
               </div>
             </div>
+            </Travado>
           </section>
 
           {/* Programação: palestras e minicursos */}
@@ -695,9 +838,23 @@ function Painel() {
                     </button>
                   ))
                 ) : (
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-foreground">
-                    Todos os minicursos
-                  </span>
+                  diasMinicursos.map((d) => (
+                    <button
+                      key={d.key}
+                      onClick={() => {
+                        setDiaMinicurso(d.key);
+                        setPgMinicursos(1);
+                      }}
+                      className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                        diaMinicursoSelecionado?.key === d.key
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground/80"
+                      }`}
+                    >
+                      {d.label}
+                      <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
+                    </button>
+                  ))
                 )}
               </div>
               {/* Seletor em pílula: fundo de campo, aba ativa com roxo translúcido */}
@@ -735,7 +892,12 @@ function Painel() {
             </div>
 
             {abaProgramacao === "minicursos" ? (
-              <MinicursosSection />
+              <MinicursosSection
+                lista={diaMinicursoSelecionado?.items ?? []}
+                pagina={pgMinicursos}
+                porPagina={PAGE}
+                onPagina={setPgMinicursos}
+              />
             ) : (
             <>
             <StatusConsulta consulta={palestras} nome="as palestras" />
@@ -766,6 +928,7 @@ function Painel() {
                         : "Sem horário"}
                     </p>
                   </div>
+                  <Travado>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       aria-label="Editar palestra"
@@ -785,6 +948,7 @@ function Painel() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
+                  </Travado>
                 </li>
               ))}
             </ul>
@@ -799,6 +963,7 @@ function Painel() {
             />
           )}
           
+            <Travado>
             <button
               onClick={() => {
                 setPalestraEdit(null);
@@ -809,6 +974,7 @@ function Painel() {
               <CirclePlus className="h-5 w-5" />
               Adicionar palestra
             </button>
+            </Travado>
             </>
             )}
           </section>
@@ -855,6 +1021,7 @@ function Painel() {
                       </span>
                     }
                   />
+                  <Travado>
                   <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/80 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       aria-label="Editar apoiador"
@@ -874,6 +1041,7 @@ function Painel() {
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                  </Travado>
                 </div>
               ))}
               {patrocinadores.isSuccess && doNivel.length === 0 && (
@@ -884,6 +1052,7 @@ function Painel() {
             </div>
             <Paginacao pagina={pgApoiadoresAtual} totalPaginas={totalPgApoiadores} onChange={setPgApoiadores} />
 
+            <Travado>
             <button
               onClick={() => {
                 setSponsorEdit(null);
@@ -894,6 +1063,7 @@ function Painel() {
               <CirclePlus className="h-5 w-5" />
               Adicionar apoiador
             </button>
+            </Travado>
           </section>
 
          {/* Comissão */}
@@ -964,6 +1134,7 @@ function Painel() {
                               {m.email || "Sem e-mail"}
                             </p>
                           </div>
+                          <Travado>
                           <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                             <button
                               aria-label="Editar membro"
@@ -983,6 +1154,7 @@ function Painel() {
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
+                          </Travado>
                         </li>
                       ))}
                     </ul>
@@ -992,6 +1164,7 @@ function Painel() {
             )}
             <Paginacao pagina={pgComissaoAtual} totalPaginas={totalPgComissao} onChange={setPgComissao} />
 
+            <Travado>
             <button
               onClick={() => {
                 setComissaoEdit(null);
@@ -1002,10 +1175,16 @@ function Painel() {
               <CirclePlus className="h-5 w-5" />
               Adicionar membro
             </button>
+            </Travado>
           </section>
 
-          {/* Controle de Acessos — apenas administradores */}
-          {isAdmin && (
+          {/* Área da Master — só a conta master */}
+          {isMaster && (
+            <MasterSection contas={listaAcessos} congelado={congelado} confirmar={confirmar} />
+          )}
+
+          {/* Controle de Acessos — administradores, master e quem tem acesso total temporário */}
+          {veAcessos && (
             <>
               <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
                 <ShieldCheck className="h-5 w-5 text-primary-glow" />
@@ -1013,25 +1192,99 @@ function Painel() {
               </h2>
               <section className="panel-surface mt-5 p-7">
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Libere ou bloqueie o acesso ao painel e defina o tipo de cada conta. Usuários
-                  comuns gerenciam o evento, mas não podem liberar acessos de outras pessoas.
+                  {acessoTotal
+                    ? "Libere ou bloqueie o acesso ao painel e defina o nível de cada conta. Usuários comuns gerenciam o evento, mas não acessam o Controle de Acessos nem a lista de presença."
+                    : "Libere as contas que pediram acesso: elas entram como usuário comum. Mudar o nível, desativar e excluir contas é feito pela conta master."}
                 </p>
                 <StatusConsulta consulta={acessos} nome="os acessos" />
                 <ul className="mt-5 divide-y divide-border/40">
-                  {acessosPagina.map((c) => (
-                    <li key={c.id} className="flex flex-wrap items-center gap-4 py-4">
-                      <div className="min-w-0 flex-1">
+                  {acessosPagina.map((c) => {
+                    const ehVoce = c.id === meuPerfil.data?.id;
+                    const editavel = !ehVoce && !c.master;
+                    // master / acesso total: tudo; administrador: só liberar contas novas de usuário comum
+                    const podeAtivar = editavel && (acessoTotal || (isAdmin && !c.ativo && c.role === "user"));
+                    const podeGerenciar = editavel && acessoTotal;
+                    const temporario = temAcessoTemporario(c);
+                    const ultimo = ultimosAcessos.data?.get(c.id);
+                    return (
+                    <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 py-4">
+                      <div className="min-w-0 flex-1 basis-56">
                         <p className="truncate text-[15px] text-foreground">{c.email}</p>
                         <p className="text-xs text-muted-foreground">
                           {c.ativo ? "Acesso liberado" : "Aguardando liberação"}
-                          {c.id === meuPerfil.data?.id && " • você"}
+                          {ehVoce && " • você"}
+                          {isMaster && ultimosAcessos.isSuccess && (
+                            <>
+                              {" • "}
+                              {ultimo
+                                ? `último acesso ${new Date(ultimo).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+                                : "nunca entrou"}
+                            </>
+                          )}
                         </p>
                       </div>
+                      {c.master && (
+                        <span
+                          title="Conta master: não pode ser alterada, desativada nem excluída"
+                          className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 text-xs font-medium text-primary-glow"
+                        >
+                          <Lock className="h-3.5 w-3.5" />
+                          Conta master
+                        </span>
+                      )}
+                      {temporario && (
+                        <span
+                          title="Acesso total temporário concedido pela conta master"
+                          className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 text-xs font-medium text-amber-300 [.light_&]:text-amber-700"
+                        >
+                          <Zap className="h-3.5 w-3.5" />
+                          Acesso total até{" "}
+                          {new Date(c.acesso_total_ate!).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                          {isMaster && (
+                            <button
+                              onClick={() => revogarAcessoTotal(c)}
+                              aria-label={`Retirar acesso total de ${c.email}`}
+                              title="Retirar acesso total"
+                              className="-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-amber-400/20"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </span>
+                      )}
+                      <Travado>
+                      {isMaster && editavel && c.ativo && !temporario && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              title="Conceder acesso total temporário"
+                              className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-amber-400/60 hover:text-foreground"
+                            >
+                              <Zap className="h-4 w-4" />
+                              Acesso total
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(
+                              [
+                                [1, "Por 1 hora"],
+                                [24, "Por 24 horas"],
+                                [24 * 7, "Por 7 dias"],
+                              ] as const
+                            ).map(([h, r]) => (
+                              <DropdownMenuItem key={h} onClick={() => concederAcessoTotal(c, h)}>
+                                {r}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                       <div className="relative shrink-0">
                         <select
-                          aria-label={`Papel de ${c.email}`}
+                          aria-label={`Nível de ${c.email}`}
                           value={c.role}
-                          disabled={c.id === meuPerfil.data?.id}
+                          disabled={!podeGerenciar}
+                          title={podeGerenciar ? undefined : "Só a conta master pode mudar o nível"}
                           onChange={(e) => atualizarAcesso(c.id, { role: e.target.value as AppRole })}
                           className="field-pill h-10 appearance-none py-0 pl-4 pr-10 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                         >
@@ -1042,8 +1295,9 @@ function Painel() {
                       </div>
                       <button
                         onClick={() => atualizarAcesso(c.id, { ativo: !c.ativo })}
-                        disabled={c.id === meuPerfil.data?.id}
-                        className={`flex h-10 items-center gap-2 rounded-full px-5 text-sm transition-colors disabled:opacity-50 ${
+                        disabled={!podeAtivar}
+                        title={podeAtivar ? undefined : "Só a conta master pode desativar contas"}
+                        className={`flex h-10 items-center gap-2 rounded-full px-5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                           c.ativo
                             ? "border border-border/70 text-muted-foreground hover:text-foreground"
                             : "bg-primary text-primary-foreground hover:bg-primary-glow"
@@ -1052,16 +1306,30 @@ function Painel() {
                         {c.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                         {c.ativo ? "Desativar" : "Liberar"}
                       </button>
+                      {acessoTotal && (
+                        <button
+                          aria-label={`Enviar redefinição de senha para ${c.email}`}
+                          title="Enviar redefinição de senha"
+                          onClick={() => enviarRedefinicao(c.email)}
+                          disabled={!podeGerenciar}
+                          className="rounded-full p-2 text-muted-foreground hover:bg-primary/15 hover:text-primary-glow disabled:pointer-events-none disabled:opacity-40"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         aria-label="Excluir conta"
+                        title={podeGerenciar ? "Excluir conta" : "Só a conta master pode excluir contas"}
                         onClick={() => excluirAcesso(c.id, c.email)}
-                        disabled={c.id === meuPerfil.data?.id}
-                        className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
+                        disabled={!podeGerenciar}
+                        className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
+                      </Travado>
                     </li>
-                  ))}
+                    );
+                  })}
                   {acessos.isSuccess && listaAcessos.length === 0 && (
                     <li className="py-4 text-sm text-muted-foreground">
                       Nenhuma solicitação de acesso no momento.
@@ -1098,6 +1366,7 @@ function Painel() {
           onSaved={() => queryClient.invalidateQueries({ queryKey: ["comissao"] })}
         />
       </main>
+      </CongeladoContext.Provider>
     </>
   );
 }
@@ -1161,4 +1430,50 @@ function useCabemNaLinha(ref: React.RefObject<HTMLElement | null>, largura: numb
   }, [ref, largura, gap]);
 
   return qtd;
+}
+
+type ItemProgramacao = {
+  data: string | null;
+  hora_inicio: string | null;
+  hora_fim: string | null;
+  rascunho?: boolean | null;
+  updated_at: string;
+};
+
+/** Abas da programação: um dia por aba (em ordem), "Sem data" e "Rascunhos" no fim. */
+function agruparPorDia<T extends ItemProgramacao>(itens: T[]) {
+  const map = new Map<string, T[]>();
+  const rascunhos: T[] = [];
+  for (const p of itens) {
+    if (p.rascunho) {
+      rascunhos.push(p);
+      continue;
+    }
+    const key = p.data ?? "sem-data";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(p);
+  }
+  const dias = Array.from(map.entries())
+    .sort(([a], [b]) => {
+      if (a === "sem-data") return 1;
+      if (b === "sem-data") return -1;
+      return a.localeCompare(b);
+    })
+    .map(([key, items]) => ({
+      key,
+      label: key === "sem-data" ? "Sem data" : formatDia(key),
+      items: [...items].sort(
+        (a, b) =>
+          (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? "") ||
+          (a.hora_fim ?? "").localeCompare(b.hora_fim ?? ""),
+      ),
+    }));
+  if (rascunhos.length > 0) {
+    dias.push({
+      key: "rascunhos",
+      label: "Rascunhos",
+      items: rascunhos.sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
+    });
+  }
+  return dias;
 }

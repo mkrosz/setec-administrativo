@@ -80,13 +80,24 @@ function LoginPage() {
       if (error) throw error;
 
       const { data: userData } = await supabase.auth.getUser();
-      const { data: perfil } = await supabase
+      const { data: perfil, error: perfilError } = await supabase
         .from("profiles")
         .select("ativo")
         .eq("id", userData.user?.id ?? "")
         .maybeSingle();
 
-      if (!perfil?.ativo) {
+      if (perfilError) {
+        await supabase.auth.signOut();
+        throw perfilError;
+      }
+      if (!perfil) {
+        // conta de login sem perfil com o mesmo id (ex.: criada direto no Supabase)
+        console.warn("[login] nenhum perfil para o usuário", userData.user?.id);
+        await supabase.auth.signOut();
+        toast.error("Sua conta não está cadastrada no painel. Solicite a liberação de acesso.");
+        return;
+      }
+      if (!perfil.ativo) {
         await supabase.auth.signOut();
         toast.error("Seu acesso ainda não foi liberado por um administrador.");
         return;

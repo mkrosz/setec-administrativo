@@ -43,21 +43,42 @@ export const solicitarAcesso = createServerFn({ method: "POST" })
   });
 
 
-/** Remove definitivamente uma conta (somente administradores ativos). */
+/** Remove definitivamente uma conta (somente a master ou quem tem acesso total temporário). */
 export const removerAcesso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { userId: string }) => ({ userId: String(input?.userId ?? "") }))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin, error: roleError } = await context.supabase.rpc("is_active_admin", {
-      _user_id: context.userId,
-    });
+    const { data: podeExcluir, error: roleError } = await context.supabase.rpc(
+      "tem_acesso_total" as any,
+      { _user_id: context.userId } as any,
+    );
     if (roleError) throw new Error(roleError.message);
-    if (!isAdmin) throw new Error("Apenas administradores podem remover acessos");
+    if (!podeExcluir) throw new Error("Apenas a conta master pode excluir contas");
     if (data.userId === context.userId) throw new Error("Você não pode remover a própria conta aqui");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("profiles").delete().eq("id", data.userId);
+    const { data: alvo } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if ((alvo as { master?: boolean } | null)?.master) throw new Error("A conta master não pode ser excluída");
+
+    const { error: perfilError } = await supabaseAdmin.from("profiles").delete().eq("id", data.userId);
+    if (perfilError) throw new Error(perfilError.message);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
+
+    // A exclusão roda com a chave de serviço, então o histórico é gravado aqui
+    const { data: eu } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    await supabaseAdmin.from("auditoria" as any).insert({
+      usuario_id: context.userId,
+      usuario_email: eu?.user?.email ?? null,
+      acao: "excluiu",
+      tabela: "profiles",
+      registro_id: data.userId,
+      descricao: alvo?.email ?? null,
+      antes: alvo,
+    } as any);
     return { ok: true };
   });
