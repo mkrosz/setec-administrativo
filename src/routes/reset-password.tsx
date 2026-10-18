@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Lock, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -30,15 +30,27 @@ function ResetPassword() {
   useForceDarkTheme();
 
   const [senha, setSenha] = useState("");
+  const [confirma, setConfirma] = useState("");
+  const [mostrar, setMostrar] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (senha !== confirma) {
+      toast.error("As senhas não conferem");
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password: senha });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(
+        /different from the old/i.test(error.message)
+          ? "A nova senha precisa ser diferente da atual"
+          : /expired|invalid/i.test(error.message)
+            ? "O link de redefinição expirou. Peça um novo na tela de login."
+            : error.message,
+      );
       return;
     }
     toast.success("Senha atualizada");
@@ -59,15 +71,44 @@ function ResetPassword() {
           <div className="relative">
             <Lock className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
             <input
-              type="password"
+              type={mostrar ? "text" : "password"}
               required
               minLength={6}
+              autoComplete="new-password"
+              aria-label="Nova senha"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               placeholder="Nova senha"
-              className="field-pill h-12 w-full pl-12 pr-4 text-sm"
+              className="field-pill h-12 w-full pl-12 pr-12 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setMostrar((v) => !v)}
+              aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {mostrar ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+            </button>
+          </div>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+            <input
+              type={mostrar ? "text" : "password"}
+              required
+              minLength={6}
+              autoComplete="new-password"
+              aria-label="Confirmar nova senha"
+              value={confirma}
+              onChange={(e) => setConfirma(e.target.value)}
+              placeholder="Confirmar nova senha"
+              className={`field-pill h-12 w-full pl-12 pr-4 text-sm ${
+                confirma && confirma !== senha ? "border-destructive/60" : ""
+              }`}
             />
           </div>
+          {confirma && confirma !== senha && (
+            <p className="px-2 text-xs text-destructive">As senhas não conferem.</p>
+          )}
           <button
             type="submit"
             disabled={loading}

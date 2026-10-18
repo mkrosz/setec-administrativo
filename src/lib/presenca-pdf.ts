@@ -6,6 +6,8 @@ import {
   formatHora,
   formatLocalPresenca,
   mapsUrl,
+  nomesPalestrantes,
+  palestrantesDe,
   type EventConfig,
   type Palestra,
   type Presenca,
@@ -51,7 +53,8 @@ export function exportarListaPresenca(
   doc.setFontSize(10);
   doc.setTextColor(...CINZA);
   const detalhes = [
-    palestra.nome_completo && `Palestrante: ${palestra.nome_completo}`,
+    nomesPalestrantes(palestra) &&
+      `${palestrantesDe(palestra).length > 1 ? "Palestrantes" : "Palestrante"}: ${nomesPalestrantes(palestra)}`,
     palestra.data && formatDia(palestra.data),
     palestra.hora_inicio &&
       palestra.hora_fim &&

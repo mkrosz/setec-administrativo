@@ -43,7 +43,7 @@ export function TurmasModal({ open, onOpenChange, turmas, onSaved }: Props) {
       .delete()
       .eq("id", t.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     onSaved();
@@ -54,6 +54,12 @@ export function TurmasModal({ open, onOpenChange, turmas, onSaved }: Props) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(480px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
+          <Dialog.Close
+            aria-label="Fechar"
+            className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Dialog.Close>
           <div className="px-7 pb-4 pt-5">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
               Turmas
@@ -97,6 +103,7 @@ export function TurmasModal({ open, onOpenChange, turmas, onSaved }: Props) {
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex.: 3º ano, Logística"
+                aria-label="Nome da nova turma"
                 className="field-pill h-10 flex-1 px-4 text-sm"
               />
               <button

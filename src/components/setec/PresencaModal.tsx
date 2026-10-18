@@ -106,7 +106,7 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved }:
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(520px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="px-7 pb-4 pt-5">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
-              Adicionar Aluno
+              Adicionar aluno
             </Dialog.Title>
             <Dialog.Description className="mt-1 truncate text-sm text-muted-foreground">
               {palestra?.titulo ?? "Palestra"}

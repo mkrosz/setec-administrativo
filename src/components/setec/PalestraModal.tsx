@@ -1,27 +1,78 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState } from "react";
-import { Camera, ChevronDown, Loader2, Plus, X } from "lucide-react";
+import { Camera, ChevronDown, Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIAS, LINK_TYPES, normalizeUrl, uploadFile, resolveUrl,  type LinkType, type Palestra } from "@/lib/setec";
+import {
+  CATEGORIAS,
+  LINK_TYPES,
+  normalizeUrl,
+  palestrantesDe,
+  uploadFile,
+  resolveUrl,
+  type LinkType,
+  type Minicurso,
+  type Palestra,
+  type Palestrante, mensagemErro } from "@/lib/setec";
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
+/** Valor da opção "Outra" no select de categoria (abre um campo para digitar). */
+const OUTRA = "__outra__";
 
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   palestra?: Palestra | null;
   onSaved: () => void;
+  /** "minicurso" usa o mesmo formulário, com vagas e textos próprios (tabela minicursos). */
+  tipo?: "palestra" | "minicurso";
+  minicurso?: Minicurso | null;
 };
 
-type ImageItem = {
+const TEXTOS = {
+  palestra: {
+    nome: "Palestra",
+    artigo: "a",
+    titulo: "Título da palestra",
+    sobre: "Sobre a palestra",
+    pessoa: "Palestrante",
+    pessoas: "Palestrantes",
+    sobrePessoa: "Sobre o palestrante",
+    pasta: "palestrantes",
+  },
+  minicurso: {
+    nome: "Minicurso",
+    artigo: "o",
+    titulo: "Título do minicurso",
+    sobre: "Sobre o minicurso",
+    pessoa: "Ministrante",
+    pessoas: "Ministrantes",
+    sobrePessoa: "Sobre o ministrante",
+    pasta: "ministrantes",
+  },
+} as const;
+
+type PalestranteItem = {
   id: string;
-  url: string | null;
+  nome: string;
+  cargo: string;
+  sobre: string;
+  /** Caminho já salvo no storage (null se não houver ou se foi trocada). */
+  fotoPath: string | null;
+  /** Nova foto escolhida, enviada ao salvar. */
   file: File | null;
   preview: string;
 };
+
+function novoPalestrante(): PalestranteItem {
+  return { id: crypto.randomUUID(), nome: "", cargo: "", sobre: "", fotoPath: null, file: null, preview: "" };
+}
+
+function palestranteVazio(p: PalestranteItem) {
+  return !p.nome.trim() && !p.cargo.trim() && !p.sobre.trim() && !p.fotoPath && !p.file;
+}
 
 type LinkItem = {
   id: string;
@@ -29,15 +80,27 @@ type LinkItem = {
   url: string;
 };
 
-export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) {
+export function PalestraModal({
+  open,
+  onOpenChange,
+  palestra: palestraProp,
+  onSaved,
+  tipo = "palestra",
+  minicurso,
+}: Props) {
+  const isMini = tipo === "minicurso";
+  const t = TEXTOS[tipo];
+  // Campos em comum; "palestra" aqui é o registro em edição (palestra ou minicurso)
+  const palestra = isMini ? minicurso : palestraProp;
+  const [vagas, setVagas] = useState("30");
   const fileRef = useRef<HTMLInputElement>(null);
+  const fotoAlvo = useRef<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [images, setImages] = useState<ImageItem[]>([]);
+  const [palestrantes, setPalestrantes] = useState<PalestranteItem[]>(() => [novoPalestrante()]);
   const [links, setLinks] = useState<LinkItem[]>([]);
+  const [categoriaOutra, setCategoriaOutra] = useState(false);
 
   const [form, setForm] = useState({
-    nome_completo: "",
-    cargo: "",
     titulo: "",
     categoria: "",
     data: "",
@@ -45,24 +108,23 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
     hora_fim: "",
     local: "",
     sobre_palestra: "",
-    sobre_palestrante: "",
   });
 
   useEffect(() => {
     if (!open) return;
 
+    // Categoria salva que não está na lista padrão = foi digitada em "Outra"
+    setCategoriaOutra(!!palestra?.categoria && !CATEGORIAS.includes(palestra.categoria));
     setForm({
-      nome_completo: palestra?.nome_completo ?? "",
-      cargo: palestra?.cargo ?? "",
       titulo: palestra?.titulo ?? "",
       categoria: palestra?.categoria ?? "",
       data: palestra?.data ?? "",
       hora_inicio: palestra?.hora_inicio?.slice(0, 5) ?? "",
       hora_fim: palestra?.hora_fim?.slice(0, 5) ?? "",
       local: palestra?.local ?? "FATEC Sorocaba - P11",
-      sobre_palestra: palestra?.sobre_palestra ?? "",
-      sobre_palestrante: palestra?.sobre_palestrante ?? "",
+      sobre_palestra: (isMini ? minicurso?.sobre : palestraProp?.sobre_palestra) ?? "",
     });
+    setVagas(String(minicurso?.vagas ?? 30));
 
     const rawLinks = Array.isArray(palestra?.links) ? palestra.links : [];
     setLinks(
@@ -73,43 +135,71 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
       }))
     );
 
-    const rawUrls: string[] = Array.isArray(palestra?.foto_url)
-      ? palestra.foto_url
-      : typeof palestra?.foto_url === "string" && palestra.foto_url
-      ? [palestra.foto_url]
-      : [];
+    const pessoas = isMini
+      ? (minicurso?.ministrantes ?? [])
+      : palestraProp
+        ? palestrantesDe(palestraProp)
+        : [];
+    const itens: PalestranteItem[] = pessoas.map((x) => ({
+      id: crypto.randomUUID(),
+      nome: x.nome ?? "",
+      cargo: x.cargo ?? "",
+      sobre: x.sobre ?? "",
+      fotoPath: x.foto_url,
+      file: null,
+      preview: "",
+    }));
+    setPalestrantes(itens.length ? itens : [novoPalestrante()]);
 
-    Promise.all(
-      rawUrls.map(async (path) => ({
-        id: Math.random().toString(),
-        url: path,
-        file: null,
-        preview: (await resolveUrl(path)) || "",
-      }))
-    ).then(setImages);
-  }, [open, palestra]);
+    let ativo = true;
+    Promise.all(itens.map(async (it) => [it.id, (await resolveUrl(it.fotoPath)) ?? ""] as const)).then(
+      (previews) => {
+        if (!ativo) return;
+        const mapa = new Map(previews);
+        setPalestrantes((prev) =>
+          prev.map((it) => (!it.file && it.fotoPath && mapa.get(it.id) ? { ...it, preview: mapa.get(it.id)! } : it)),
+        );
+      },
+    );
+    return () => {
+      ativo = false;
+    };
+  }, [open, palestra, isMini, minicurso, palestraProp]);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    const newItems: ImageItem[] = files.map((file) => ({
-      id: Math.random().toString(),
-      url: null,
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-
-    setImages((prev) => [...prev, ...newItems]);
-    if (fileRef.current) fileRef.current.value = "";
+  function updatePalestrante(id: string, patch: Partial<Omit<PalestranteItem, "id">>) {
+    setPalestrantes((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
 
-  function removeImage(id: string) {
-    setImages((prev) => prev.filter((item) => item.id !== id));
+  function addPalestrante() {
+    setPalestrantes((prev) => [...prev, novoPalestrante()]);
+  }
+
+  function removePalestrante(id: string) {
+    setPalestrantes((prev) => {
+      const resto = prev.filter((p) => p.id !== id);
+      return resto.length ? resto : [novoPalestrante()];
+    });
+  }
+
+  function escolherFoto(id: string) {
+    fotoAlvo.current = id;
+    fileRef.current?.click();
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const alvo = fotoAlvo.current;
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file || !alvo) return;
+    updatePalestrante(alvo, { file, fotoPath: null, preview: URL.createObjectURL(file) });
+  }
+
+  function removerFoto(id: string) {
+    updatePalestrante(id, { file: null, fotoPath: null, preview: "" });
   }
 
   function addLink() {
@@ -134,22 +224,36 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
   }
 
   async function save(asDraft: boolean) {
-    if (asDraft && !form.titulo.trim() && !form.nome_completo.trim()) {
+    const preenchidos = palestrantes.filter((p) => !palestranteVazio(p));
+
+    if (asDraft && !form.titulo.trim() && !preenchidos.some((p) => p.nome.trim())) {
       toast.error("Preencha ao menos o título ou o nome para salvar o rascunho");
       return;
     }
 
     setSaving(true);
     try {
-      const finalUrls: string[] = [];
-
-      for (const img of images) {
-        if (img.url) {
-          finalUrls.push(img.url);
-        } else if (img.file) {
-          const uploadedPath = await uploadFile(img.file, "palestrantes");
-          if (uploadedPath) finalUrls.push(uploadedPath);
+      if (!asDraft) {
+        if (preenchidos.length === 0) throw new Error(`Adicione ao menos um ${t.pessoa.toLowerCase()}`);
+        if (preenchidos.some((p) => !p.nome.trim())) {
+          throw new Error(`Informe o nome de todos os ${t.pessoas.toLowerCase()}`);
         }
+      }
+
+      const vagasNum = Number.parseInt(vagas, 10);
+      if (isMini && !(vagasNum >= 1 && vagasNum <= 10000)) {
+        throw new Error("Informe o número de vagas (1 a 10000)");
+      }
+
+      const lista: Palestrante[] = [];
+      for (const p of preenchidos) {
+        const foto = p.file ? await uploadFile(p.file, t.pasta) : p.fotoPath;
+        lista.push({
+          nome: p.nome.trim(),
+          cargo: p.cargo.trim() || null,
+          foto_url: foto || null,
+          sobre: p.sobre.trim() || null,
+        });
       }
 
       const cleanLinks = links
@@ -165,34 +269,58 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
       }
 
       // Data e horas só são guardadas se estiverem completas (o banco recusa valores pela metade)
-      const dataOk = /^\d{4}-\d{2}-\d{2}$/.test(form.data);
+      // Data no formato do banco (AAAA-MM-DD) e que exista de verdade (ex.: 31/02 é recusado)
+      const dataOk = (() => {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(form.data);
+        if (!m) return false;
+        const [a, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])];
+        const d = new Date(a, mes - 1, dia);
+        return d.getFullYear() === a && d.getMonth() === mes - 1 && d.getDate() === dia;
+      })();
       const horaOk = (h: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(h);
       const inicioOk = horaOk(form.hora_inicio);
       const fimOk = horaOk(form.hora_fim);
 
       if (!asDraft) {
-        if (!dataOk) throw new Error("Informe a data completa (DD/MM/AAAA)");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(form.data)) throw new Error("Informe a data completa (DD/MM/AAAA)");
+        if (!dataOk) throw new Error("Essa data não existe. Confira o dia e o mês (DD/MM/AAAA)");
         if (!inicioOk || !fimOk) throw new Error("Informe horários válidos (HH:MM)");
       }
+      if (form.data && /^\d{4}-\d{2}-\d{2}$/.test(form.data) && !dataOk) {
+        throw new Error("Essa data não existe. Confira o dia e o mês (DD/MM/AAAA)");
+      }
+      if (inicioOk && fimOk && form.hora_fim <= form.hora_inicio) {
+        throw new Error("O horário de término precisa ser depois do horário de início");
+      }
 
-      const payload = {
-        ...form,
-        cargo: form.cargo || null,
-        categoria: form.categoria || null,
+      const comum = {
+        titulo: form.titulo,
+        categoria: form.categoria.trim() || null,
         data: dataOk ? form.data : null,
         hora_inicio: inicioOk ? form.hora_inicio : null,
         hora_fim: fimOk ? form.hora_fim : null,
         local: form.local || null,
-        sobre_palestra: form.sobre_palestra || null,
-        sobre_palestrante: form.sobre_palestrante || null,
-        foto_url: finalUrls,
         links: cleanLinks,
         rascunho: asDraft,
       };
 
+      // As colunas antigas também são recalculadas pelo trigger do banco (supabase/sql/palestrantes.sql)
+      const payload = isMini
+        ? { ...comum, ministrantes: lista, sobre: form.sobre_palestra || null, vagas: vagasNum }
+        : {
+            ...comum,
+            sobre_palestra: form.sobre_palestra || null,
+            palestrantes: lista,
+            nome_completo: lista.map((p) => p.nome).filter(Boolean).join(", "),
+            cargo: lista[0]?.cargo ?? null,
+            sobre_palestrante: lista[0]?.sobre ?? null,
+            foto_url: lista.flatMap((p) => (p.foto_url ? [p.foto_url] : [])),
+          };
+
+      const tabela = (isMini ? "minicursos" : "palestras") as "palestras";
       const { error } = palestra
-        ? await supabase.from("palestras").update(payload as any).eq("id", palestra.id)
-        : await supabase.from("palestras").insert(payload as any);
+        ? await supabase.from(tabela).update(payload as any).eq("id", palestra.id)
+        : await supabase.from(tabela).insert(payload as any);
 
       if (error) throw error;
 
@@ -204,13 +332,15 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
         toast.success("Rascunho salvo");
         if (incompleto) toast.info("Data ou horário incompletos não foram guardados no rascunho");
       } else {
-        toast.success(palestra?.rascunho ? "Palestra publicada" : palestra ? "Palestra atualizada" : "Palestra cadastrada");
+        toast.success(
+          `${t.nome} ${palestra?.rascunho ? "publicad" : palestra ? "atualizad" : "cadastrad"}${t.artigo}`,
+        );
       }
 
       onOpenChange(false);
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar palestra");
+      toast.error(mensagemErro(err, `Erro ao salvar ${t.nome.toLowerCase()}`));
     } finally {
       setSaving(false);
     }
@@ -223,7 +353,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(900px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="px-7 pb-4 pt-5">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
-              {palestra?.rascunho ? "Editar Rascunho" : palestra ? "Atualizar Palestra" : "Cadastrar Palestra"}
+              {palestra?.rascunho ? "Editar rascunho" : palestra ? `Editar ${t.nome.toLowerCase()}` : `Adicionar ${t.nome.toLowerCase()}`}
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
               {palestra?.rascunho
@@ -236,102 +366,74 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
           <div className="border-t border-border/60" />
 
           <form id="palestra-form" onSubmit={onSubmit} className="space-y-4 px-7 py-5">
-            {/* Seção de Fotos Múltiplas */}
-            <div className="space-y-2">
-              <span className={label}>Fotos dos Palestrantes ({images.length})</span>
-              <div className="flex flex-wrap gap-3">
-                {images.map((img) => (
-                  <div key={img.id} className="relative h-20 w-20 rounded-2xl border border-border/70 overflow-hidden group">
-                    <img src={img.preview} alt="Palestrante" className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(img.id)}
-                      className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-90 hover:bg-red-600 transition-colors"
-                      title="Remover foto"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border/70 bg-field text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-                >
-                  <Camera className="h-5 w-5" />
-                  <span className="text-[10px] tracking-[0.14em]">+ FOTO</span>
-                </button>
-              </div>
-
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <span className={label}>Nome(s) Completo(s)</span>
-                <input
-                  required
-                  maxLength={120}
-                  value={form.nome_completo}
-                  onChange={(e) => set("nome_completo", e.target.value)}
-                  placeholder="Ex: Dr. Alan Turing, Ada Lovelace"
-                  className={pill}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <span className={label}>Cargo / Instituição</span>
-                <input
-                  required
-                  maxLength={140}
-                  value={form.cargo}
-                  onChange={(e) => set("cargo", e.target.value)}
-                  placeholder="Ex: Pesquisadores do MIT"
-                  className={pill}
-                />
-              </div>
-            </div>
-
             <div className="space-y-1.5">
-              <span className={label}>Título da palestra</span>
+              <span className={label}>{t.titulo}</span>
               <input
                 required
                 maxLength={160}
                 value={form.titulo}
                 onChange={(e) => set("titulo", e.target.value)}
-                placeholder="O Futuro da IA no Design"
+                placeholder={isMini ? "Criando APIs com Node.js" : "O Futuro da IA no Design"}
                 className="field-pill h-12 w-full px-5 text-base"
               />
             </div>
 
             <div className="space-y-1.5">
               <span className={label}>Categoria / Tag</span>
-              <div className="relative">
-                <select
-                  required
-                  value={form.categoria}
-                  onChange={(e) => set("categoria", e.target.value)}
-                  className={`${pill} appearance-none pr-11`}
-                >
-                  <option value="" disabled>
-                    Selecione...
-                  </option>
-                  {CATEGORIAS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+              <div className={categoriaOutra ? "grid gap-3 sm:grid-cols-2" : ""}>
+                <div className="relative">
+                  <select
+                    required
+                    value={categoriaOutra ? OUTRA : form.categoria}
+                    onChange={(e) => {
+                      const outra = e.target.value === OUTRA;
+                      setCategoriaOutra(outra);
+                      set("categoria", outra ? "" : e.target.value);
+                    }}
+                    className={`${pill} appearance-none pr-11`}
+                  >
+                    <option value="" disabled>
+                      Selecione…
                     </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    {CATEGORIAS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value={OUTRA}>Outra (digitar)…</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </div>
+                {categoriaOutra && (
+                  <input
+                    required
+                    autoFocus
+                    maxLength={40}
+                    value={form.categoria}
+                    onChange={(e) => set("categoria", e.target.value)}
+                    placeholder="Digite a categoria (ex: Robótica)"
+                    className={pill}
+                  />
+                )}
               </div>
             </div>
+
+            {isMini && (
+              <div className="space-y-1.5">
+                <span className={label}>Número de vagas</span>
+                <input
+                  required
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={10000}
+                  value={vagas}
+                  onChange={(e) => setVagas(e.target.value.replace(/\D/g, ""))}
+                  placeholder="30"
+                  className={`${pill} sm:max-w-48`}
+                />
+              </div>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1.5">
@@ -405,31 +507,126 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <span className={label}>Sobre a palestra</span>
-                <textarea
-                  required
-                  rows={3}
-                  maxLength={1200}
-                  value={form.sobre_palestra}
-                  onChange={(e) => set("sobre_palestra", e.target.value)}
-                  placeholder="Descreva os tópicos..."
-                  className="field-pill w-full resize-none rounded-2xl px-5 py-3 text-sm"
-                />
+            <div className="space-y-1.5">
+              <span className={label}>{t.sobre}</span>
+              <textarea
+                required
+                rows={3}
+                maxLength={1200}
+                value={form.sobre_palestra}
+                onChange={(e) => set("sobre_palestra", e.target.value)}
+                placeholder="Descreva os tópicos…"
+                className="field-pill w-full resize-none rounded-2xl px-5 py-3 text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className={label}>
+                {palestrantes.length > 1 ? `${t.pessoas} (${palestrantes.length})` : t.pessoa}
+              </span>
+
+              <div className="space-y-3">
+                {palestrantes.map((p, i) => (
+                  <div key={p.id} className="panel-surface space-y-3 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-sm font-semibold text-foreground">
+                        {t.pessoa} {i + 1}
+                      </span>
+                      {palestrantes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removePalestrante(p.id)}
+                          aria-label={`Remover ${t.pessoa.toLowerCase()} ${i + 1}`}
+                          title={`Remover ${t.pessoa.toLowerCase()}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-600/20 hover:text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <div className="relative h-20 w-20 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => escolherFoto(p.id)}
+                          title={p.preview ? "Trocar foto" : "Adicionar foto"}
+                          className="flex h-20 w-20 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-dashed border-border/70 bg-field text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                        >
+                          {p.preview ? (
+                            <img src={p.preview} alt={p.nome || "Palestrante"} className="h-full w-full object-cover" />
+                          ) : (
+                            <>
+                              <Camera className="h-5 w-5" />
+                              <span className="text-[10px] tracking-[0.14em]">+ FOTO</span>
+                            </>
+                          )}
+                        </button>
+                        {p.preview && (
+                          <button
+                            type="button"
+                            onClick={() => removerFoto(p.id)}
+                            className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-90 transition-colors hover:bg-red-600"
+                            title="Remover foto"
+                            aria-label="Remover foto"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <span className={label}>Nome completo</span>
+                          <input
+                            required
+                            maxLength={120}
+                            value={p.nome}
+                            onChange={(e) => updatePalestrante(p.id, { nome: e.target.value })}
+                            placeholder="Ex.: Ada Lovelace"
+                            className={pill}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className={label}>Cargo / Instituição</span>
+                          <input
+                            required
+                            maxLength={140}
+                            value={p.cargo}
+                            onChange={(e) => updatePalestrante(p.id, { cargo: e.target.value })}
+                            placeholder="Ex.: Pesquisadora do MIT"
+                            className={pill}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className={label}>{t.sobrePessoa}</span>
+                      <textarea
+                        required
+                        rows={3}
+                        maxLength={1200}
+                        value={p.sobre}
+                        onChange={(e) => updatePalestrante(p.id, { sobre: e.target.value })}
+                        placeholder="Breve biografia…"
+                        className="field-pill w-full resize-none rounded-2xl px-5 py-3 text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-1.5">
-                <span className={label}>Sobre o(s) palestrante(s)</span>
-                <textarea
-                  required
-                  rows={3}
-                  maxLength={1200}
-                  value={form.sobre_palestrante}
-                  onChange={(e) => set("sobre_palestrante", e.target.value)}
-                  placeholder="Breve biografia..."
-                  className="field-pill w-full resize-none rounded-2xl px-5 py-3 text-sm"
-                />
-              </div>
+
+              <button
+                type="button"
+                onClick={addPalestrante}
+                className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm font-medium text-foreground transition-colors hover:border-primary/60"
+              >
+                <UserPlus className="h-4 w-4" />
+                Adicionar {t.pessoa.toLowerCase()}
+              </button>
+
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
             </div>
 
             <div className="space-y-2">
@@ -457,7 +654,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
                       inputMode="url"
                       value={l.url}
                       onChange={(e) => updateLink(l.id, { url: e.target.value })}
-                      placeholder="https://..."
+                      placeholder="https://…"
                       className={`${pill} min-w-0 flex-1`}
                     />
 
@@ -510,7 +707,7 @@ export function PalestraModal({ open, onOpenChange, palestra, onSaved }: Props) 
               className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {palestra?.rascunho ? "Publicar" : palestra ? "Atualizar" : "Salvar Palestra"}
+              {palestra?.rascunho ? "Publicar" : palestra ? "Salvar alterações" : `Salvar ${t.nome.toLowerCase()}`}
             </button>
           </div>
         </Dialog.Content>

@@ -21,6 +21,8 @@ export function Paginacao({ pagina, totalPaginas, onChange }: Props) {
         <button
           key={n}
           onClick={() => onChange(n)}
+          aria-label={`Página ${n}`}
+          aria-current={n === pagina ? "page" : undefined}
           className={
             n === pagina
               ? "flex h-8 min-w-8 items-center justify-center rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground"

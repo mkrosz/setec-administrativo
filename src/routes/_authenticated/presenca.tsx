@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SetecLogo } from "@/components/setec/SetecLogo";
 import { PresencaModal } from "@/components/setec/PresencaModal";
+import { useConfirmar } from "@/components/setec/ConfirmDialog";
 import { TurmasModal } from "@/components/setec/TurmasModal";
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ import { resolverLocaisPendentes } from "@/lib/geo";
 import { exportarListaPresenca } from "@/lib/presenca-pdf";
 import {
   compararTurmas,
+  nomesPalestrantes,
   coordenadasPresenca,
   formatDataHora,
   formatDia,
@@ -125,6 +127,7 @@ const iconBtn =
 
 function PresencaPage() {
   const queryClient = useQueryClient();
+  const [dialogoConfirmar, confirmar] = useConfirmar();
   const { isLight, toggle } = useTheme();
   const agora = useAgora();
 
@@ -360,7 +363,7 @@ function PresencaPage() {
       .update({ encerrado: true } as any)
       .eq("id", qrAtivo.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["presenca_qrcodes"] });
@@ -368,13 +371,24 @@ function PresencaPage() {
   }
 
   async function removerPresenca(p: Presenca) {
-    if (!confirm(`Remover ${p.nome_completo} da lista de presença?`)) return;
+    const ok = await confirmar({
+      tom: "perigo",
+      titulo: "Remover presença",
+      descricao: (
+        <>
+          <strong className="text-foreground">{p.nome_completo}</strong> (RA {p.ra}) sai da lista de presença desta
+          palestra.
+        </>
+      ),
+      confirmar: "Remover",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("presencas" as any)
       .delete()
       .eq("id", p.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["presencas"] });
@@ -402,7 +416,7 @@ function PresencaPage() {
   }
 
   const carregando = palestras.isLoading || presencas.isLoading;
-  const erroTabela = presencas.error ?? qrcodes.error ?? turmas.error;
+  const erroTabela = palestras.error ?? presencas.error ?? qrcodes.error ?? turmas.error;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background px-6 pb-24 pt-8 md:px-16">
@@ -439,8 +453,7 @@ function PresencaPage() {
 
         {erroTabela && (
           <p className="mt-8 rounded-2xl border border-destructive/50 bg-destructive/10 px-5 py-4 text-sm text-destructive">
-            Não foi possível carregar os dados de presença. Verifique se o SQL de presença foi
-            executado no Supabase. ({mensagemErro(erroTabela)})
+            Não foi possível carregar os dados de presença. {mensagemErro(erroTabela)}
           </p>
         )}
 
@@ -449,6 +462,12 @@ function PresencaPage() {
           Chamada
         </h2>
         <section className="panel-surface mt-5 p-7">
+          {carregando && (
+            <p className="flex items-center gap-2 pb-4 text-sm text-muted-foreground" role="status">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Carregando palestras e presenças…
+            </p>
+          )}
           {/* Seleção de dia e palestra */}
           <div className="flex items-center gap-3 border-b border-border/40 pb-5">
             <DropdownMenu>
@@ -491,7 +510,7 @@ function PresencaPage() {
                     <button
                       onClick={() => setPalestraAtiva(p.id)}
                       aria-pressed={selecionada}
-                      title={[p.titulo, p.nome_completo].filter(Boolean).join(" — ")}
+                      title={[p.titulo, nomesPalestrantes(p)].filter(Boolean).join(" — ")}
                       className={`flex h-12 w-full items-center gap-2.5 rounded-2xl border pl-4 pr-2.5 text-left transition-colors ${
                         selecionada
                           ? "border-primary/70 bg-primary/10"
@@ -647,12 +666,12 @@ function PresencaPage() {
                       value={busca}
                       onChange={(e) => setBusca(e.target.value)}
                       placeholder="Buscar por nome ou RA"
+                      aria-label="Buscar aluno por nome ou RA"
                       className="field-pill h-10 w-full pl-11 pr-4 text-sm"
                     />
                   </div>
                   <button
                     onClick={() => setTurmasOpen(true)}
-                    aria-label="Gerenciar turmas"
                     title="Gerenciar turmas"
                     className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
                   >
@@ -716,7 +735,9 @@ function PresencaPage() {
                         <th className="px-4 py-3 font-medium">Turma</th>
                         <th className="px-4 py-3 font-medium">Horário</th>
                         <th className="px-4 py-3 font-medium">Local</th>
-                        <th className="px-2 py-3" />
+                        <th className="px-2 py-3">
+                          <span className="sr-only">Ações</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
@@ -773,6 +794,7 @@ function PresencaPage() {
         </section>
       </div>
 
+      {dialogoConfirmar}
       <PresencaModal
         open={manualOpen}
         onOpenChange={setManualOpen}
@@ -846,7 +868,7 @@ function ProjecaoQr({
           {palestra.titulo}
         </h2>
         <p className="mt-3 text-[clamp(0.85rem,1.3vw,1.25rem)] text-white/70">
-          {[horario(palestra), palestra.local, palestra.nome_completo].filter(Boolean).join(" • ")}
+          {[horario(palestra), palestra.local, nomesPalestrantes(palestra)].filter(Boolean).join(" • ")}
         </p>
         <p className="mt-[5vh] font-display text-[clamp(2.5rem,6vw,6.5rem)] font-bold leading-none tabular-nums">
           {restante}

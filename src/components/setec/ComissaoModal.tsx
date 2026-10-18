@@ -4,7 +4,7 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { GRUPOS_COMISSAO, type GrupoComissao, type MembroComissao } from "@/lib/setec";
+import { GRUPOS_COMISSAO, semestresDoGrupo, type GrupoComissao, type MembroComissao, mensagemErro } from "@/lib/setec";
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
@@ -22,12 +22,15 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [grupo, setGrupo] = useState<GrupoComissao>(grupoPadrao);
+  const [semestre, setSemestre] = useState("");
+  const totalSemestres = semestresDoGrupo(grupo);
 
   useEffect(() => {
     if (!open) return;
     setNome(membro?.nome ?? "");
     setEmail(membro?.email ?? "");
     setGrupo(membro?.grupo ?? grupoPadrao);
+    setSemestre(membro?.semestre ? String(membro.semestre) : "");
   }, [open, membro, grupoPadrao]);
 
   async function save(keepOpen: boolean) {
@@ -43,9 +46,20 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
       return;
     }
 
+    if (totalSemestres && !semestre) {
+      toast.error("Selecione o semestre");
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload = { nome: nomeLimpo, email: emailLimpo || null, grupo };
+      const payload = {
+        nome: nomeLimpo,
+        email: emailLimpo || null,
+        grupo,
+        // Só os cursos semestrais guardam o semestre
+        ...(totalSemestres ? { semestre: Number(semestre) } : { semestre: null }),
+      };
       const { error } = membro
         ? await supabase.from("comissao" as any).update(payload as any).eq("id", membro.id)
         : await supabase.from("comissao" as any).insert(payload as any);
@@ -55,13 +69,14 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
       onSaved();
 
       if (keepOpen) {
+        // Mantém grupo e semestre para cadastrar vários da mesma turma em sequência
         setNome("");
         setEmail("");
       } else {
         onOpenChange(false);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar membro");
+      toast.error(mensagemErro(err, "Erro ao salvar membro"));
     } finally {
       setSaving(false);
     }
@@ -74,7 +89,7 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(520px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="px-7 pb-4 pt-5">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
-              {membro ? "Editar Membro" : "Adicionar Membro"}
+              {membro ? "Editar membro" : "Adicionar membro"}
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
               Membro da comissão organizadora da SETEC.
@@ -116,22 +131,52 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
               />
             </div>
 
-            <div className="space-y-1.5">
-              <span className={label}>Grupo</span>
-              <div className="relative">
-                <select
-                  value={grupo}
-                  onChange={(e) => setGrupo(e.target.value as GrupoComissao)}
-                  className={`${pill} appearance-none pr-11`}
-                >
-                  {GRUPOS_COMISSAO.map((g) => (
-                    <option key={g.value} value={g.value}>
-                      {g.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className={totalSemestres ? "grid gap-3 sm:grid-cols-2" : ""}>
+              <div className="space-y-1.5">
+                <span className={label}>Grupo</span>
+                <div className="relative">
+                  <select
+                    value={grupo}
+                    onChange={(e) => {
+                      const novo = e.target.value as GrupoComissao;
+                      setGrupo(novo);
+                      // Mantém o semestre só se ele existir no novo curso
+                      if (Number(semestre) > semestresDoGrupo(novo)) setSemestre("");
+                    }}
+                    className={`${pill} appearance-none pr-11`}
+                  >
+                    {GRUPOS_COMISSAO.map((g) => (
+                      <option key={g.value} value={g.value}>
+                        {g.semestres ? `${g.label} (semestral)` : g.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </div>
               </div>
+
+              {totalSemestres > 0 && (
+                <div className="space-y-1.5">
+                  <span className={label}>Semestre</span>
+                  <div className="relative">
+                    <select
+                      value={semestre}
+                      onChange={(e) => setSemestre(e.target.value)}
+                      className={`${pill} appearance-none pr-11`}
+                    >
+                      <option value="" disabled>
+                        Selecione…
+                      </option>
+                      {Array.from({ length: totalSemestres }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n}º semestre
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  </div>
+                </div>
+              )}
             </div>
           </form>
 
@@ -159,7 +204,7 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
               className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {membro ? "Atualizar" : "Salvar"}
+              {membro ? "Salvar alterações" : "Salvar"}
             </button>
           </div>
         </Dialog.Content>

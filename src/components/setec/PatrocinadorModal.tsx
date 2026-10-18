@@ -4,7 +4,7 @@ import { ChevronDown, Loader2, Paperclip, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { NIVEIS, uploadFile, type Patrocinador } from "@/lib/setec";
+import { NIVEIS, uploadFile, type Patrocinador, mensagemErro } from "@/lib/setec";
 
 const label = "block text-sm font-medium text-foreground";
 const pill = "field-pill h-12 w-full px-5 text-sm";
@@ -55,7 +55,7 @@ export function PatrocinadorModal({
       onOpenChange(false);
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar apoiador");
+      toast.error(mensagemErro(err, "Erro ao salvar apoiador"));
     } finally {
       setSaving(false);
     }
@@ -66,7 +66,7 @@ export function PatrocinadorModal({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(508px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[22px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
-          <Dialog.Title className="sr-only">Adicionar apoiador</Dialog.Title>
+          <Dialog.Title className="sr-only">{patrocinador ? "Editar apoiador" : "Adicionar apoiador"}</Dialog.Title>
           <Dialog.Description className="sr-only">
             Informe a empresa, o logotipo e o nível de apoio.
           </Dialog.Description>
@@ -79,7 +79,7 @@ export function PatrocinadorModal({
                 maxLength={120}
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Tech Corp Solutions"
+                placeholder="Ex.: Tecnologia Sorocaba Ltda."
                 className={pill}
               />
             </div>
@@ -140,7 +140,7 @@ export function PatrocinadorModal({
               className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : !patrocinador && <Plus className="h-4 w-4" />}
-              {patrocinador ? "Atualizar" : "Adicionar Apoiador"}
+              {patrocinador ? "Salvar alterações" : "Adicionar apoiador"}
             </button>
           </div>
         </Dialog.Content>

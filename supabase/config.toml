@@ -1,1 +1,9 @@
 project_id = "SEU-PROJETO-ANTIGO"
+[functions.confirmar-inscricao]
+verify_jwt = false
+
+[functions.verificar-devolucoes]
+verify_jwt = false
+
+[functions.limpar-imagens]
+verify_jwt = false

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { mensagemErro } from "@/lib/setec";
 
 import { supabase } from "@/integrations/supabase/client";
+import { registrarLembrar, sessaoExpirouPorFecharNavegador, ultimaEscolhaLembrar } from "@/lib/lembrar";
 import { SetecLogo } from "@/components/setec/SetecLogo";
 import { useForceDarkTheme } from "@/hooks/use-theme";
 import { solicitarAcesso } from "@/lib/access.functions";
@@ -38,11 +40,16 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [show, setShow] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
 
   useEffect(() => {
+    setRemember(ultimaEscolhaLembrar());
+    if (sessaoExpirouPorFecharNavegador()) {
+      supabase.auth.signOut();
+      return;
+    }
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/painel", replace: true });
     });
@@ -57,6 +64,7 @@ function LoginPage() {
         if (res?.autoAprovado) {
           const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
           if (error) throw error;
+          registrarLembrar(remember);
           toast.success("Conta criada como administrador do sistema.");
           navigate({ to: "/painel", replace: true });
           return;
@@ -83,9 +91,10 @@ function LoginPage() {
         toast.error("Seu acesso ainda não foi liberado por um administrador.");
         return;
       }
+      registrarLembrar(remember);
       navigate({ to: "/painel", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Não foi possível entrar");
+      toast.error(mensagemErro(err, "Não foi possível entrar"));
     } finally {
       setLoading(false);
     }
@@ -101,7 +110,7 @@ function LoginPage() {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     toast.success("Enviamos um link de redefinição para o seu e-mail");
@@ -132,6 +141,7 @@ function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="E-mail corporativo"
+              aria-label="E-mail"
               className="field-pill h-12 w-full pl-12 pr-4 text-sm"
             />
           </div>
@@ -146,6 +156,7 @@ function LoginPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               placeholder="Senha"
+              aria-label="Senha"
               className="field-pill h-12 w-full pl-12 pr-12 text-sm"
             />
             <button
@@ -154,18 +165,21 @@ function LoginPage() {
               aria-label={show ? "Ocultar senha" : "Mostrar senha"}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             >
-              {show ? <Eye className="h-4.5 w-4.5" /> : <EyeOff className="h-4.5 w-4.5" />}
+              {show ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
             </button>
           </div>
 
           <div className="flex items-center justify-between pt-1 text-sm">
             <label className="flex cursor-pointer items-center gap-2 text-foreground/90">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="h-4 w-4 appearance-none rounded-[3px] border border-border bg-transparent checked:border-primary checked:bg-primary"
-              />
+              <span className="relative flex h-4 w-4 items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="peer h-4 w-4 appearance-none rounded-[3px] border border-border bg-transparent checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                />
+                <Check className="pointer-events-none absolute h-3 w-3 text-primary-foreground opacity-0 peer-checked:opacity-100" />
+              </span>
               Lembrar de mim
             </label>
             <button
@@ -186,7 +200,7 @@ function LoginPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                {mode === "login" ? "Entrar no Painel Administrativo" : "Solicitar acesso"}
+                {mode === "login" ? "Entrar no painel" : "Solicitar acesso"}
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

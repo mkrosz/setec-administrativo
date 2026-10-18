@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CirclePlus,
@@ -42,15 +42,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportarJSON, exportarPDF, importarJSON } from "@/lib/backup";
+import { exportarJSON, exportarPDF, importarJSON, lerBackup, resumoBackup } from "@/lib/backup";
 import {
   NIVEIS,
   GRUPOS_COMISSAO,
+  porSemestre,
+  semestresDoGrupo,
   type GrupoComissao,
   type MembroComissao,
   formatDia,
   formatHora,
   initials,
+  mensagemErro,
+  nomesPalestrantes,
+  palestrantesDe,
   uploadFile,
   type EventConfig,
   type Palestra,
@@ -58,6 +63,13 @@ import {
 } from "@/lib/setec";
 import { useTheme } from "@/hooks/use-theme";
 import { ComissaoModal } from "@/components/setec/ComissaoModal";
+import { DataEventoField } from "@/components/setec/DatasEventoFields";
+import { ResetAnoModal } from "@/components/setec/ResetAnoModal";
+import { StatusConsulta } from "@/components/setec/StatusConsulta";
+import { useConfirmar } from "@/components/setec/ConfirmDialog";
+import { verificarDevolucoes } from "@/lib/devolucoes";
+import { AvataresPessoas } from "@/components/setec/AvataresPessoas";
+import { MinicursosSection, useMinicursos } from "@/components/setec/MinicursosSection";
 
 type AppRole = "admin" | "user";
 type Profile = { id: string; email: string; role: AppRole; ativo: boolean; created_at: string };
@@ -93,6 +105,15 @@ function Painel() {
 
   const [palestraOpen, setPalestraOpen] = useState(false);
   const [palestraEdit, setPalestraEdit] = useState<Palestra | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [dialogoConfirmar, confirmar] = useConfirmar();
+
+  // Ao abrir o painel, confere se algum e-mail de confirmação foi devolvido (ex.: caixa inexistente)
+  useEffect(() => {
+    verificarDevolucoes(queryClient);
+  }, [queryClient]);
+  const [abaProgramacao, setAbaProgramacao] = useState<"palestras" | "minicursos">("palestras");
+  const minicursosQuery = useMinicursos();
   const [sponsorOpen, setSponsorOpen] = useState(false);
   const [sponsorEdit, setSponsorEdit] = useState<Patrocinador | null>(null);
   const [nivelAtivo, setNivelAtivo] = useState<string>("MASTER");
@@ -105,6 +126,7 @@ function Painel() {
   const [comissaoOpen, setComissaoOpen] = useState(false);
   const [comissaoEdit, setComissaoEdit] = useState<MembroComissao | null>(null);
   const [grupoAtivo, setGrupoAtivo] = useState<GrupoComissao>("professor");
+  const [pgComissao, setPgComissao] = useState(1);
   const { isLight, toggle } = useTheme();
 
   const config = useQuery({
@@ -186,21 +208,32 @@ function Painel() {
   async function atualizarAcesso(id: string, patch: { role?: AppRole; ativo?: boolean }) {
     const { error } = await supabase.from("profiles").update(patch).eq("id", id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["profiles"] });
     toast.success("Acesso atualizado");
   }
 
-  async function excluirAcesso(id: string) {
-    if (!confirm("Excluir definitivamente esta conta de acesso?")) return;
+  async function excluirAcesso(id: string, email: string) {
+    const ok = await confirmar({
+      tom: "perigo",
+      titulo: "Excluir conta de acesso",
+      descricao: (
+        <>
+          A conta <strong className="text-foreground">{email}</strong> perde o acesso ao painel e é excluída
+          definitivamente.
+        </>
+      ),
+      confirmar: "Excluir conta",
+    });
+    if (!ok) return;
     try {
       await removerConta({ data: { userId: id } });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       toast.success("Conta removida");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao remover a conta");
+      toast.error(mensagemErro(err, "Falha ao remover a conta"));
     }
   }
 
@@ -209,7 +242,7 @@ function Painel() {
     if (!config.data) return;
     const { error } = await supabase.from("event_config").update(patch).eq("id", config.data.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["event_config"] });
@@ -222,14 +255,27 @@ function Painel() {
       await updateConfig({ logo_url: path });
       toast.success("Logo do evento atualizada");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no upload");
+      toast.error(mensagemErro(err, "Falha no upload"));
     }
   }
 
   async function removerPalestra(id: string) {
+    const p = (palestras.data ?? []).find((x) => x.id === id);
+    const ok = await confirmar({
+      tom: "perigo",
+      titulo: "Remover palestra",
+      descricao: (
+        <>
+          <strong className="text-foreground">{p?.titulo || "Esta palestra"}</strong> será apagada junto com a lista de
+          presença e os QR Codes dela. Esta ação não pode ser desfeita.
+        </>
+      ),
+      confirmar: "Remover",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("palestras").delete().eq("id", id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     toast.success("Palestra removida");
@@ -237,9 +283,22 @@ function Painel() {
   }
 
   async function removerPatrocinador(id: string) {
+    const a = (patrocinadores.data ?? []).find((x) => x.id === id);
+    const ok = await confirmar({
+      tom: "perigo",
+      titulo: "Remover apoiador",
+      descricao: (
+        <>
+          <strong className="text-foreground">{a?.nome_empresa || "Este apoiador"}</strong> sai da lista de apoiadores e
+          da faixa de parceiros do site.
+        </>
+      ),
+      confirmar: "Remover",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("patrocinadores").delete().eq("id", id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     toast.success("Apoiador removido");
@@ -247,22 +306,26 @@ function Painel() {
   }
 
   async function removerMembro(id: string) {
+    const m = (comissao.data ?? []).find((x) => x.id === id);
+    const ok = await confirmar({
+      tom: "perigo",
+      titulo: "Remover membro",
+      descricao: (
+        <>
+          <strong className="text-foreground">{m?.nome || "Este membro"}</strong> sai da comissão organizadora e da página
+          Comissão do site.
+        </>
+      ),
+      confirmar: "Remover",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("comissao" as any).delete().eq("id", id);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     toast.success("Membro removido");
     queryClient.invalidateQueries({ queryKey: ["comissao"] });
-  }
-
-  async function resetarAno() {
-    if (!confirm("Resetar todos os dados do ano? Palestras e apoiadores serão apagados.")) return;
-    await supabase.from("palestras").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("patrocinadores").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("comissao" as any).delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    queryClient.invalidateQueries();
-    toast.success("Dados do ano resetados");
   }
 
   async function sair() {
@@ -273,6 +336,9 @@ function Painel() {
   }
 
   const PAGE = 3;
+  // Apoiadores: cabe uma linha inteira de logos antes de paginar
+  const apoiadoresRef = useRef<HTMLDivElement>(null);
+  const porPaginaApoiadores = useCabemNaLinha(apoiadoresRef, LOGO_LARGURA, LOGO_GAP);
 
   // Agrupa as palestras por data; palestras sem data ficam numa aba no final
   const diasPalestras = useMemo(() => {
@@ -330,9 +396,24 @@ function Painel() {
     () => (patrocinadores.data ?? []).filter((p) => p.nivel === nivelAtivo),
     [patrocinadores.data, nivelAtivo],
   );
-  const membrosDoGrupo = (comissao.data ?? []).filter((m) => m.grupo === grupoAtivo);
-  const totalPgApoiadores = Math.max(1, Math.ceil(doNivel.length / PAGE));
-  const apoiadoresPagina = doNivel.slice((pgApoiadores - 1) * PAGE, pgApoiadores * PAGE);
+  // Comissão: 12 por página; nos cursos semestrais a ordem é por semestre antes de paginar
+  const POR_PAGINA_COMISSAO = 12;
+  const todosDoGrupo = (comissao.data ?? []).filter((m) => m.grupo === grupoAtivo);
+  const ordenadosDoGrupo = semestresDoGrupo(grupoAtivo)
+    ? porSemestre(todosDoGrupo).flatMap((b) => b.membros)
+    : todosDoGrupo;
+  const totalPgComissao = Math.max(1, Math.ceil(ordenadosDoGrupo.length / POR_PAGINA_COMISSAO));
+  const pgComissaoAtual = Math.min(pgComissao, totalPgComissao);
+  const membrosDoGrupo = ordenadosDoGrupo.slice(
+    (pgComissaoAtual - 1) * POR_PAGINA_COMISSAO,
+    pgComissaoAtual * POR_PAGINA_COMISSAO,
+  );
+  const totalPgApoiadores = Math.max(1, Math.ceil(doNivel.length / porPaginaApoiadores));
+  const pgApoiadoresAtual = Math.min(pgApoiadores, totalPgApoiadores);
+  const apoiadoresPagina = doNivel.slice(
+    (pgApoiadoresAtual - 1) * porPaginaApoiadores,
+    pgApoiadoresAtual * porPaginaApoiadores,
+  );
 
   const listaAcessos = acessos.data ?? [];
   const totalPgAcessos = Math.max(1, Math.ceil(listaAcessos.length / PAGE));
@@ -346,7 +427,7 @@ function Painel() {
       await fn();
       toast.success(sucesso);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Ocorreu um erro");
+      toast.error(mensagemErro(err, "Ocorreu um erro"));
     } finally {
       setOcupado(false);
     }
@@ -354,6 +435,44 @@ function Painel() {
 
   async function onImportar(file: File | undefined) {
     if (!file) return;
+    let r: ReturnType<typeof resumoBackup>;
+    try {
+      r = resumoBackup(await lerBackup(file));
+    } catch (err) {
+      toast.error(mensagemErro(err, "Não foi possível ler o arquivo"));
+      return;
+    }
+    const itens = [
+      [r.palestras, "palestras"],
+      [r.presencas, "presenças"],
+      [r.minicursos, "minicursos"],
+      [r.inscricoes, "inscrições"],
+      [r.apoiadores, "apoiadores"],
+      [r.comissao, "membros da comissão"],
+    ].filter(([n]) => (n as number) > 0) as [number, string][];
+    const ok = await confirmar({
+      tom: "aviso",
+      titulo: "Importar backup",
+      descricao: (
+        <>
+          <span className="block">
+            Arquivo <strong className="text-foreground">{file.name}</strong>
+            {r.exportadoEm ? `, gerado em ${r.exportadoEm}` : ""}.
+          </span>
+          <span className="mt-2 block">
+            Será restaurado:{" "}
+            {itens.length ? itens.map(([n, nome]) => `${n} ${nome}`).join(", ") : "nenhum registro"}
+            {r.evento ? ", e as informações do evento" : ""}.
+          </span>
+          <span className="mt-2 block">
+            Registros com o mesmo código são <strong className="text-foreground">substituídos</strong> pelos do
+            arquivo; os demais continuam como estão.
+          </span>
+        </>
+      ),
+      confirmar: "Importar",
+    });
+    if (!ok) return;
     await comEspera(async () => {
       await importarJSON(file);
       queryClient.invalidateQueries();
@@ -367,11 +486,11 @@ function Painel() {
           <SetecLogo />
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={resetarAno}
+              onClick={() => setResetOpen(true)}
               className="flex h-10 items-center gap-2 rounded-full border border-destructive/60 px-5 text-sm text-destructive transition-colors hover:bg-destructive/10"
             >
               <RotateCcw className="h-4 w-4" />
-              Resetar Dados do Ano
+              Resetar dados do ano
             </button>
             <div className="flex items-center gap-2">
               <DropdownMenu>
@@ -485,6 +604,7 @@ function Painel() {
             Informações do Evento
           </h2>
           <section className="panel-surface mt-5 p-7">
+            <StatusConsulta consulta={config} nome="as informações do evento" />
             <span className="text-xs text-muted-foreground">Logo do Evento</span>
             <div className="mt-3 flex flex-col gap-5 lg:flex-row">
               <button
@@ -523,16 +643,13 @@ function Painel() {
                   value={config.data?.edicao ?? ""}
                   onCommit={(v) => updateConfig({ edicao: v })}
                 />
-                <ConfigField
-                  label="Ano"
-                  value={config.data?.ano ?? ""}
-                  onCommit={(v) => updateConfig({ ano: v })}
-                />
-                <ConfigField
-                  label="Datas"
-                  value={config.data?.datas ?? ""}
-                  onCommit={(v) => updateConfig({ datas: v })}
-                />
+                <div className="sm:col-span-2">
+                  <DataEventoField
+                    datas={config.data?.datas ?? ""}
+                    ano={config.data?.ano ?? ""}
+                    onChange={(datas, ano) => updateConfig({ datas, ano })}
+                  />
+                </div>
                 <ConfigField
                   className="sm:col-span-2"
                   icon
@@ -550,44 +667,82 @@ function Painel() {
             </div>
           </section>
 
-          {/* Palestras */}
+          {/* Programação: palestras e minicursos */}
           <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
             <Mic className="h-5 w-5 text-primary-glow" />
-            Gerenciar Palestras
+            Gerenciar Programação
           </h2>
           <section className="panel-surface mt-5 p-7">
-            {diasPalestras.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-8 border-b border-border/40 pb-4">
-                {diasPalestras.map((d) => (
-                  <button
-                    key={d.key}
-                    onClick={() => {
-                      setDiaAtivo(d.key);
-                      setPgPalestras(1);
-                    }}
-                    className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
-                      diaSelecionado?.key === d.key
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground/80"
-                    }`}
-                  >
-                    {d.label}
-                    <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
-                  </button>
-                ))}
+            {/* Linha de abas: dias (palestras) à esquerda, palestras/minicursos à direita */}
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b border-border/40 pb-4">
+              <div className="flex flex-wrap gap-8">
+                {abaProgramacao === "palestras" ? (
+                  diasPalestras.map((d) => (
+                    <button
+                      key={d.key}
+                      onClick={() => {
+                        setDiaAtivo(d.key);
+                        setPgPalestras(1);
+                      }}
+                      className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                        diaSelecionado?.key === d.key
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground/80"
+                      }`}
+                    >
+                      {d.label}
+                      <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-foreground">
+                    Todos os minicursos
+                  </span>
+                )}
               </div>
-            )}
+              {/* Seletor em pílula: fundo de campo, aba ativa com roxo translúcido */}
+              <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-field/60 p-1" role="tablist">
+                {(
+                  [
+                    { valor: "palestras", rotulo: "Palestras", total: (palestras.data ?? []).length },
+                    { valor: "minicursos", rotulo: "Minicursos", total: (minicursosQuery.data ?? []).length },
+                  ] as const
+                ).map((aba) => {
+                  const ativa = abaProgramacao === aba.valor;
+                  return (
+                    <button
+                      key={aba.valor}
+                      role="tab"
+                      aria-selected={ativa}
+                      onClick={() => setAbaProgramacao(aba.valor)}
+                      className={`flex h-8 items-center gap-2 rounded-full px-4 text-xs font-medium transition-all ${
+                        ativa
+                          ? "bg-primary/20 text-foreground ring-1 ring-primary/30"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                          ativa ? "bg-primary-glow" : "bg-muted-foreground/40"
+                        }`}
+                      />
+                      {aba.rotulo}
+                      <span className={`tabular-nums ${ativa ? "text-primary-glow" : "opacity-60"}`}>{aba.total}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {abaProgramacao === "minicursos" ? (
+              <MinicursosSection />
+            ) : (
+            <>
+            <StatusConsulta consulta={palestras} nome="as palestras" />
             <ul className="divide-y divide-border/40">
               {palestrasPagina.map((p) => (
                 <li key={p.id} className="group flex items-center gap-4 py-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-muted-foreground">
-                    <StorageImage
-                      path={Array.isArray(p.foto_url) ? (p.foto_url[0] ?? null) : p.foto_url}
-                      alt={p.nome_completo}
-                      className="h-11 w-11 object-cover"
-                      fallback={<>{initials(p.nome_completo)}</>}
-                    />
-                  </span>
+                  <AvataresPessoas pessoas={palestrantesDe(p)} />
                                     <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 truncate text-base text-foreground">
                       <span className="truncate">{p.titulo || "(Sem título)"}</span>
@@ -598,7 +753,7 @@ function Painel() {
                       )}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {p.nome_completo || "Palestrante não informado"}
+                      {nomesPalestrantes(p) || "Palestrante não informado"}
                     </p>
                   </div>
                   <div className="hidden text-right sm:block">
@@ -633,7 +788,7 @@ function Painel() {
                 </li>
               ))}
             </ul>
-            {diasPalestras.length === 0 && (
+            {palestras.isSuccess && diasPalestras.length === 0 && (
               <p className="py-4 text-sm text-muted-foreground">Nenhuma palestra cadastrada.</p>
             )}
             {totalPgPalestras > 1 && (
@@ -652,8 +807,10 @@ function Painel() {
               className="mt-5 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
             >
               <CirclePlus className="h-5 w-5" />
-              Cadastrar Nova Palestra
+              Adicionar palestra
             </button>
+            </>
+            )}
           </section>
 
           {/* Apoiadores */}
@@ -681,7 +838,8 @@ function Painel() {
               ))}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-4">
+            <StatusConsulta consulta={patrocinadores} nome="os apoiadores" />
+            <div ref={apoiadoresRef} className="mt-6 flex flex-wrap gap-4">
               {apoiadoresPagina.map((s) => (
                 <div
                   key={s.id}
@@ -718,13 +876,13 @@ function Painel() {
                   </div>
                 </div>
               ))}
-              {doNivel.length === 0 && (
+              {patrocinadores.isSuccess && doNivel.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   Nenhum apoiador cadastrado neste nível.
                 </p>
               )}
             </div>
-            <Paginacao pagina={pgApoiadores} totalPaginas={totalPgApoiadores} onChange={setPgApoiadores} />
+            <Paginacao pagina={pgApoiadoresAtual} totalPaginas={totalPgApoiadores} onChange={setPgApoiadores} />
 
             <button
               onClick={() => {
@@ -734,7 +892,7 @@ function Painel() {
               className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
             >
               <CirclePlus className="h-5 w-5" />
-              Adicionar Novo Apoiador
+              Adicionar apoiador
             </button>
           </section>
 
@@ -750,7 +908,10 @@ function Painel() {
                 return (
                   <button
                     key={g.value}
-                    onClick={() => setGrupoAtivo(g.value)}
+                    onClick={() => {
+                      setGrupoAtivo(g.value);
+                      setPgComissao(1);
+                    }}
                     className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
                       grupoAtivo === g.value
                         ? "text-foreground"
@@ -764,45 +925,72 @@ function Painel() {
               })}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              {membrosDoGrupo.map((m) => (
-                <div
-                  key={m.id}
-                  className="group flex items-center gap-2 rounded-full border border-border/60 bg-field px-4 py-2 text-sm text-foreground"
-                >
-                  <span>
-                    {m.nome}
-                    {m.email && (
-                      <span className="ml-2 text-xs text-muted-foreground">{m.email}</span>
+            <StatusConsulta consulta={comissao} nome="a comissão" />
+            {membrosDoGrupo.length === 0 ? (
+              comissao.isSuccess ? (
+                <p className="mt-6 text-sm text-muted-foreground">Nenhum membro cadastrado neste grupo.</p>
+              ) : null
+            ) : (
+              <div className="mt-6 space-y-6">
+                {(semestresDoGrupo(grupoAtivo)
+                  ? porSemestre(membrosDoGrupo)
+                  : [{ semestre: 0, membros: membrosDoGrupo }]
+                ).map((bloco) => (
+                  <div key={bloco.semestre}>
+                    {bloco.semestre > 0 && (
+                      <p className="mb-3 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                        <span className="text-foreground">{bloco.semestre}º semestre</span>
+                        <span className="opacity-60">({bloco.membros.length})</span>
+                        <span className="h-px flex-1 bg-border/40" />
+                      </p>
                     )}
-                  </span>
-                  <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      aria-label="Editar membro"
-                      onClick={() => {
-                        setComissaoEdit(m);
-                        setComissaoOpen(true);
-                      }}
-                      className="rounded-full p-1 text-muted-foreground hover:text-foreground"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      aria-label="Remover membro"
-                      onClick={() => removerMembro(m.id)}
-                      className="rounded-full p-1 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </span>
-                </div>
-              ))}
-              {membrosDoGrupo.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum membro cadastrado neste grupo.
-                </p>
-              )}
-            </div>
+                    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {bloco.membros.map((m) => (
+                        <li
+                          key={m.id}
+                          className="group flex min-w-0 items-center gap-3 rounded-2xl border border-border/60 bg-field/40 px-4 py-3 transition-colors hover:border-primary/40"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary-glow">
+                            {initials(m.nome)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground" title={m.nome}>
+                              {m.nome}
+                            </p>
+                            <p
+                              className="truncate text-xs text-muted-foreground"
+                              title={m.email ?? undefined}
+                            >
+                              {m.email || "Sem e-mail"}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                            <button
+                              aria-label="Editar membro"
+                              onClick={() => {
+                                setComissaoEdit(m);
+                                setComissaoOpen(true);
+                              }}
+                              className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              aria-label="Remover membro"
+                              onClick={() => removerMembro(m.id)}
+                              className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Paginacao pagina={pgComissaoAtual} totalPaginas={totalPgComissao} onChange={setPgComissao} />
 
             <button
               onClick={() => {
@@ -812,7 +1000,7 @@ function Painel() {
               className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
             >
               <CirclePlus className="h-5 w-5" />
-              Adicionar Membro
+              Adicionar membro
             </button>
           </section>
 
@@ -828,6 +1016,7 @@ function Painel() {
                   Libere ou bloqueie o acesso ao painel e defina o tipo de cada conta. Usuários
                   comuns gerenciam o evento, mas não podem liberar acessos de outras pessoas.
                 </p>
+                <StatusConsulta consulta={acessos} nome="os acessos" />
                 <ul className="mt-5 divide-y divide-border/40">
                   {acessosPagina.map((c) => (
                     <li key={c.id} className="flex flex-wrap items-center gap-4 py-4">
@@ -838,15 +1027,19 @@ function Painel() {
                           {c.id === meuPerfil.data?.id && " • você"}
                         </p>
                       </div>
-                      <select
-                        value={c.role}
-                        disabled={c.id === meuPerfil.data?.id}
-                        onChange={(e) => atualizarAcesso(c.id, { role: e.target.value as AppRole })}
-                        className="h-10 rounded-full border border-border/60 bg-field/60 px-4 text-sm text-foreground outline-none disabled:opacity-50"
-                      >
-                        <option value="admin">Administrador</option>
-                        <option value="user">Usuário comum</option>
-                      </select>
+                      <div className="relative shrink-0">
+                        <select
+                          aria-label={`Papel de ${c.email}`}
+                          value={c.role}
+                          disabled={c.id === meuPerfil.data?.id}
+                          onChange={(e) => atualizarAcesso(c.id, { role: e.target.value as AppRole })}
+                          className="field-pill h-10 appearance-none py-0 pl-4 pr-10 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="admin">Administrador</option>
+                          <option value="user">Usuário comum</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      </div>
                       <button
                         onClick={() => atualizarAcesso(c.id, { ativo: !c.ativo })}
                         disabled={c.id === meuPerfil.data?.id}
@@ -861,7 +1054,7 @@ function Painel() {
                       </button>
                       <button
                         aria-label="Excluir conta"
-                        onClick={() => excluirAcesso(c.id)}
+                        onClick={() => excluirAcesso(c.id, c.email)}
                         disabled={c.id === meuPerfil.data?.id}
                         className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
                       >
@@ -869,7 +1062,7 @@ function Painel() {
                       </button>
                     </li>
                   ))}
-                  {listaAcessos.length === 0 && (
+                  {acessos.isSuccess && listaAcessos.length === 0 && (
                     <li className="py-4 text-sm text-muted-foreground">
                       Nenhuma solicitação de acesso no momento.
                     </li>
@@ -882,6 +1075,8 @@ function Painel() {
         </div>
 
 
+        <ResetAnoModal open={resetOpen} onOpenChange={setResetOpen} />
+        {dialogoConfirmar}
         <PalestraModal
           open={palestraOpen}
           onOpenChange={setPalestraOpen}
@@ -945,4 +1140,25 @@ function ConfigField({
       </span>
     </label>
   );
+}
+
+// Card de logo dos apoiadores: w-48.75 (195px) com gap-4 (16px)
+const LOGO_LARGURA = 195;
+const LOGO_GAP = 16;
+
+/** Quantos itens de largura fixa cabem numa linha do container (atualiza ao redimensionar). */
+function useCabemNaLinha(ref: React.RefObject<HTMLElement | null>, largura: number, gap: number) {
+  const [qtd, setQtd] = useState(5);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const medir = () => setQtd(Math.max(1, Math.floor((el.clientWidth + gap) / (largura + gap))));
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ref, largura, gap]);
+
+  return qtd;
 }

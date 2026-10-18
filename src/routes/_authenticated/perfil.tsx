@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
+import { mensagemErro } from "@/lib/setec";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SetecLogo } from "@/components/setec/SetecLogo";
+import { useConfirmar } from "@/components/setec/ConfirmDialog";
 import { deleteMyAccount } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
@@ -32,6 +34,7 @@ export const Route = createFileRoute("/_authenticated/perfil")({
 const fieldLabel = "text-[10px] uppercase tracking-[0.16em] text-muted-foreground";
 
 function Perfil() {
+  const [dialogoConfirmar, confirmar] = useConfirmar();
   const navigate = useNavigate();
   const excluir = useServerFn(deleteMyAccount);
 
@@ -65,7 +68,7 @@ function Perfil() {
     });
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(mensagemErro(error));
       return;
     }
     setAtual("");
@@ -75,7 +78,13 @@ function Perfil() {
   }
 
   async function excluirConta() {
-    if (!confirm("Excluir seu perfil permanentemente? Esta ação não pode ser desfeita.")) return;
+    const ok = await confirmar({
+      tom: "perigo",
+      titulo: "Excluir seu perfil",
+      descricao: "Sua conta e o seu acesso ao painel serão excluídos permanentemente. Esta ação não pode ser desfeita.",
+      confirmar: "Excluir perfil",
+    });
+    if (!ok) return;
     setRemoving(true);
     try {
       await excluir({ data: undefined });
@@ -83,7 +92,7 @@ function Perfil() {
       toast.success("Perfil excluído");
       navigate({ to: "/", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao excluir o perfil");
+      toast.error(mensagemErro(err, "Falha ao excluir o perfil"));
     } finally {
       setRemoving(false);
     }
@@ -175,6 +184,7 @@ function Perfil() {
           </button>
         </section>
       </div>
+      {dialogoConfirmar}
     </main>
   );
 }
