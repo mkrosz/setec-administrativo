@@ -21,6 +21,10 @@ dist-ssr
 .nitro
 *.local
 
+# Supabase CLI (dados locais do projeto vinculado: ref, organização e host do banco)
+supabase/.temp/
+supabase/.branches/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

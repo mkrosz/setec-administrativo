@@ -1,6 +1,8 @@
 -- Reconstrói o histórico de antes de 05/10/2026 (apoiadores, palestras e comissão),
--- usando os dados que estão no banco. Autor: autor@exemplo.com.
+-- usando os dados que estão no banco.
 -- Rodar depois do master-recursos.sql, master-desfazer.sql e master-historico.sql.
+-- Antes de rodar, troque 'autor@exemplo.com' (em v_email) pelo e-mail da conta que aparece
+-- como autora no histórico, sem salvar o e-mail real no repositório.
 -- Pode rodar de novo: apaga os registros reconstruídos e cria de novo.
 --
 -- Casos especiais (como foi contado):

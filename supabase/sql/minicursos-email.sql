@@ -1,7 +1,8 @@
 -- =====================================================================
 -- SETEC • E-mail de confirmação de inscrição em minicurso
--- Rode DEPOIS de minicursos.sql e de publicar a Edge Function
--- "confirmar-inscricao" (supabase/functions/confirmar-inscricao).
+-- Rode DEPOIS de minicursos.sql, de config-projeto.sql (URL do projeto no
+-- Vault) e de publicar a Edge Function "confirmar-inscricao"
+-- (supabase/functions/confirmar-inscricao).
 -- Pode ser executado mais de uma vez com segurança (idempotente).
 --
 -- A cada nova inscrição (pelo site ou manual no painel) o banco chama a
@@ -25,7 +26,7 @@ SET search_path = public, extensions
 AS $$
 BEGIN
   PERFORM net.http_post(
-    url := 'https://SEU-PROJETO.supabase.co/functions/v1/confirmar-inscricao',
+    url := public.setec_edge_function_url('confirmar-inscricao'),
     body := jsonb_build_object('id', NEW.id),
     headers := jsonb_build_object('Content-Type', 'application/json'),
     timeout_milliseconds := 10000
@@ -62,8 +63,11 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Inscrição não encontrada.';
   END IF;
+  IF public.setec_edge_function_url('confirmar-inscricao') IS NULL THEN
+    RAISE EXCEPTION 'URL do projeto não configurada (rode config-projeto.sql).';
+  END IF;
   PERFORM net.http_post(
-    url := 'https://SEU-PROJETO.supabase.co/functions/v1/confirmar-inscricao',
+    url := public.setec_edge_function_url('confirmar-inscricao'),
     body := jsonb_build_object('id', _id),
     headers := jsonb_build_object('Content-Type', 'application/json'),
     timeout_milliseconds := 10000

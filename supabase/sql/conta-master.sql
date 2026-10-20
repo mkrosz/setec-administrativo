@@ -1,7 +1,11 @@
--- Conta master do painel: email-da-master@exemplo.com
+-- Conta master do painel
 -- Ninguém (nem outro administrador, nem o servidor com a chave de serviço) consegue
 -- excluir, desativar, rebaixar ou alterar essa conta. Só dá para mexer nela aqui no SQL Editor,
 -- desligando a proteção de propósito (veja o final do arquivo).
+--
+-- Na primeira vez, troque 'email-da-master@exemplo.com' (passo 2) pelo e-mail da conta
+-- no SQL Editor, sem salvar o e-mail real no repositório. Se já existir uma master,
+-- o passo 2 é pulado e o arquivo só atualiza as travas.
 
 -- 1) Marca de conta master (só pode existir uma)
 alter table public.profiles add column if not exists master boolean not null default false;
@@ -9,15 +13,24 @@ create unique index if not exists profiles_um_master on public.profiles (master)
 
 -- 2) Promove a conta (precisa já ter sido criada no painel)
 do $$
+declare
+  v_email text := lower('email-da-master@exemplo.com');
 begin
-  if not exists (select 1 from public.profiles where lower(email) = 'email-da-master@exemplo.com') then
-    raise exception 'A conta email-da-master@exemplo.com ainda não existe em profiles. Crie a conta no painel antes de rodar este SQL.';
+  if exists (select 1 from public.profiles where master) then
+    raise notice 'Já existe uma conta master; promoção ignorada.';
+    return;
+  end if;
+  if v_email = 'email-da-master@exemplo.com' then
+    raise exception 'Troque email-da-master@exemplo.com pelo e-mail da conta master antes de rodar este SQL.';
+  end if;
+  if not exists (select 1 from public.profiles where lower(email) = v_email) then
+    raise exception 'A conta % ainda não existe em profiles. Crie a conta no painel antes de rodar este SQL.', v_email;
   end if;
   -- desliga a trava só durante a promoção, caso o SQL esteja sendo rodado de novo
   perform set_config('setec.liberar_master', 'on', true);
   update public.profiles
      set master = true, role = 'admin', ativo = true
-   where lower(email) = 'email-da-master@exemplo.com';
+   where lower(email) = v_email;
 end $$;
 
 -- 3) Trava na tabela profiles

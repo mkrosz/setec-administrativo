@@ -1,0 +1,14 @@
+# Sempre LF no repositório e na cópia local, inclusive no Windows
+# (o Prettier do projeto exige LF; com CRLF o "pnpm lint" acusa milhares de erros).
+* text=auto eol=lf
+
+# Arquivos binários
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

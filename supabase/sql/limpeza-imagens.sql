@@ -1,7 +1,8 @@
 -- =====================================================================
 -- SETEC • Limpeza automática de imagens sem uso (12 meses)
--- Rode DEPOIS de publicar a Edge Function "limpar-imagens"
--- (supabase/functions/limpar-imagens), com "Verify JWT" desativado.
+-- Rode DEPOIS de config-projeto.sql (URL do projeto no Vault) e de publicar
+-- a Edge Function "limpar-imagens" (supabase/functions/limpar-imagens),
+-- com "Verify JWT" desativado.
 -- Pode ser executado mais de uma vez com segurança (idempotente).
 --
 -- Todo dia a função compara os arquivos do bucket "setec-bucket" com as
@@ -58,7 +59,7 @@ SELECT cron.schedule(
   '30 6 * * *',
   $$
     SELECT net.http_post(
-      url := 'https://SEU-PROJETO.supabase.co/functions/v1/limpar-imagens',
+      url := public.setec_edge_function_url('limpar-imagens'),
       body := '{}'::jsonb,
       headers := jsonb_build_object('Content-Type', 'application/json'),
       timeout_milliseconds := 60000
