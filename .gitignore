@@ -39,3 +39,6 @@ supabase/.branches/
 *.njsproj
 *.sln
 *.sw?
+
+# Configuração local do Claude Code
+.claude/launch.json
