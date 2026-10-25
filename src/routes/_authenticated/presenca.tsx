@@ -430,7 +430,7 @@ function PresencaPage() {
   const erroTabela = palestras.error ?? presencas.error ?? qrcodes.error ?? turmas.error;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background px-6 pb-24 pt-8 md:px-16">
+    <main className="relative min-h-screen overflow-hidden bg-background px-4 pb-24 pt-8 sm:px-6 md:px-16">
       <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
         <SetecLogo />
         <div className="flex items-center gap-3">
@@ -452,7 +452,7 @@ function PresencaPage() {
       </header>
 
       <div className="relative mx-auto mt-14 max-w-290">
-        <h1 className="title-gradient font-display text-6xl font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
+        <h1 className="title-gradient font-display text-[clamp(1.75rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
           Lista de
           <br />
           Presença
@@ -472,15 +472,15 @@ function PresencaPage() {
           <ClipboardCheck className="h-5 w-5 text-primary-glow" />
           Chamada
         </h2>
-        <section className="panel-surface mt-5 p-7">
+        <section className="panel-surface mt-5 p-4 sm:p-7">
           {carregando && (
             <p className="flex items-center gap-2 pb-4 text-sm text-muted-foreground" role="status">
               <Loader2 className="h-4 w-4 animate-spin" />
               Carregando palestras e presenças…
             </p>
           )}
-          {/* Seleção de dia e palestra */}
-          <div className="flex items-center gap-3 border-b border-border/40 pb-5">
+          {/* Seleção de dia e palestra (no celular as palestras ficam numa linha própria) */}
+          <div className="flex flex-wrap items-center gap-3 border-b border-border/40 pb-5 sm:flex-nowrap">
             <DropdownMenu>
               <DropdownMenuTrigger className={`${pillTrigger} shrink-0`} disabled={!dias.length}>
                 <CalendarDays className="h-4 w-4 text-primary-glow" />
@@ -511,7 +511,7 @@ function PresencaPage() {
             </DropdownMenu>
 
             {/* Palestras do dia, numa linha só (paginada se não couber) */}
-            <ul className="flex min-w-0 flex-1 gap-2">
+            <ul className="order-last flex w-full min-w-0 gap-2 sm:order-none sm:w-auto sm:flex-1">
               {palestrasVisiveis.map((p) => {
                 const selecionada = palestraSelecionada?.id === p.id;
                 const total = presencasPorPalestra.get(p.id)?.length ?? 0;
@@ -569,7 +569,7 @@ function PresencaPage() {
             </ul>
 
             {totalPgPalestras > 1 && (
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0">
                 <button
                   onClick={() => setPgPalestras(pgPalestrasAtual - 1)}
                   disabled={pgPalestrasAtual === 0}
@@ -671,7 +671,7 @@ function PresencaPage() {
               {/* Tabela */}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative min-w-50 flex-1">
+                  <div className="relative w-full min-w-0 sm:w-auto sm:min-w-50 sm:flex-1">
                     <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       value={busca}
@@ -684,14 +684,14 @@ function PresencaPage() {
                   <button
                     onClick={() => setTurmasOpen(true)}
                     title="Gerenciar turmas"
-                    className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                    className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none"
                   >
                     <GraduationCap className="h-4 w-4" />
                     Turmas
                   </button>
                   <button
                     onClick={() => setManualOpen(true)}
-                    className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                    className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none"
                   >
                     <UserPlus className="h-4 w-4" />
                     Adicionar aluno
@@ -699,7 +699,7 @@ function PresencaPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       disabled={gerandoPdf}
-                      className="flex h-10 items-center gap-2 rounded-full bg-primary/20 px-4 text-sm text-primary-glow outline-none transition-colors hover:bg-primary/30 disabled:opacity-60"
+                      className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary/20 px-4 text-sm text-primary-glow sm:flex-none outline-none transition-colors hover:bg-primary/30 disabled:opacity-60"
                     >
                       {gerandoPdf ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -774,7 +774,7 @@ function PresencaPage() {
                             <LocalCell p={p} />
                           </td>
                           <td className="px-2 py-3">
-                            <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                            <div className="flex items-center justify-end gap-0.5 acoes-hover">
                             <button
                               aria-label={`Editar ${p.nome_completo}`}
                               title="Corrigir nome, RA ou turma"

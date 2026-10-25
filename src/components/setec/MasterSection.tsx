@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRightLeft,
@@ -404,7 +404,7 @@ function Valor({ campo, valor }: { campo: string; valor: unknown }) {
   }
   if (campo === "role") return <span>{valor === "admin" ? "Administrador" : "Usuário comum"}</span>;
   const texto = typeof valor === "string" ? valor : JSON.stringify(valor);
-  return <span className="block max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{texto}</span>;
+  return <span className="block max-h-40 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere]">{texto}</span>;
 }
 
 /** Antes e depois lado a lado (alteração) ou o item como ficou (criação/exclusão). */
@@ -414,20 +414,25 @@ function Comparacao({ r }: { r: Registro }) {
     if (!campos.length) {
       return <p className="text-xs text-muted-foreground">Só campos internos do sistema foram alterados.</p>;
     }
+    // Cada linha é uma grade própria: as colunas usam minmax(0, …) para ficarem alinhadas em todas.
+    // No celular o nome do campo vira uma faixa acima de "antes" e "depois".
+    const colunas = "grid grid-cols-2 sm:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)]";
     return (
       <div className="overflow-hidden rounded-xl border border-border/50">
-        <div className="grid grid-cols-[minmax(90px,140px)_1fr_1fr] bg-background/40 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          <span className="px-3 py-2">Campo</span>
-          <span className="border-l border-border/40 px-3 py-2 text-destructive/90">Antes</span>
+        <div className={`${colunas} bg-background/40 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground`}>
+          <span className="hidden px-3 py-2 sm:block">Campo</span>
+          <span className="px-3 py-2 text-destructive/90 sm:border-l sm:border-border/40">Antes</span>
           <span className="border-l border-border/40 px-3 py-2 text-emerald-400">Depois</span>
         </div>
         {campos.map((c) => (
-          <div key={c} className="grid grid-cols-[minmax(90px,140px)_1fr_1fr] border-t border-border/40 text-sm">
-            <span className="px-3 py-2.5 text-xs text-muted-foreground">{ROTULO_CAMPO.get(c)}</span>
-            <div className="min-w-0 border-l border-border/40 bg-destructive/[0.04] px-3 py-2.5 text-foreground/80">
+          <div key={c} className={`${colunas} border-t border-border/40 text-sm`}>
+            <span className="col-span-2 break-words bg-background/20 px-3 py-1.5 text-xs text-muted-foreground sm:col-span-1 sm:bg-transparent sm:py-2.5">
+              {ROTULO_CAMPO.get(c)}
+            </span>
+            <div className="min-w-0 border-t border-border/40 bg-destructive/[0.04] px-3 py-2.5 text-foreground/80 sm:border-l sm:border-t-0">
               <Valor campo={c} valor={r.antes?.[c]} />
             </div>
-            <div className="min-w-0 border-l border-border/40 bg-emerald-500/[0.04] px-3 py-2.5 text-foreground">
+            <div className="min-w-0 border-l border-t border-border/40 bg-emerald-500/[0.04] px-3 py-2.5 text-foreground sm:border-t-0">
               <Valor campo={c} valor={r.depois?.[c]} />
             </div>
           </div>
@@ -448,8 +453,8 @@ function Comparacao({ r }: { r: Registro }) {
         {r.acao === "criou" ? "Como foi criado" : "Como estava antes de ser excluído"}
       </p>
       {campos.map((c) => (
-        <div key={c} className="grid grid-cols-[minmax(90px,140px)_1fr] border-t border-border/40 text-sm">
-          <span className="px-3 py-2.5 text-xs text-muted-foreground">{ROTULO_CAMPO.get(c)}</span>
+        <div key={c} className="grid grid-cols-[96px_minmax(0,1fr)] border-t border-border/40 text-sm sm:grid-cols-[140px_minmax(0,1fr)]">
+          <span className="break-words px-3 py-2.5 text-xs text-muted-foreground">{ROTULO_CAMPO.get(c)}</span>
           <div className="min-w-0 border-l border-border/40 px-3 py-2.5 text-foreground">
             <Valor campo={c} valor={linha[c]} />
           </div>
@@ -472,6 +477,9 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
   const [aberto, setAberto] = useState<number | null>(null);
   const [desfazendo, setDesfazendo] = useState<number | null>(null);
   const [apagando, setApagando] = useState(false);
+  const caixaRef = useRef<HTMLDivElement>(null);
+  const rodapeRef = useRef<HTMLDivElement>(null);
+  const topoRodape = useRef<number | null>(null);
 
   const consulta = useQuery({
     queryKey: ["auditoria", pessoa, acao, area, pagina],
@@ -502,6 +510,22 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const inicio = total ? (pagina - 1) * POR_PAGINA + 1 : 0;
   const fim = Math.min(pagina * POR_PAGINA, total);
+
+  function mudarPagina(n: number) {
+    // Guarda onde os botões estão na tela para a página não subir nem descer ao trocar o conteúdo
+    topoRodape.current = rodapeRef.current?.getBoundingClientRect().top ?? null;
+    setPagina(n);
+    setAberto(null);
+  }
+
+  // Nova página: a caixa volta ao topo e a tela fica parada onde estava
+  useLayoutEffect(() => {
+    caixaRef.current?.scrollTo({ top: 0 });
+    const antes = topoRodape.current;
+    const depois = rodapeRef.current?.getBoundingClientRect().top;
+    if (antes != null && depois != null && Math.abs(depois - antes) > 1) window.scrollBy(0, depois - antes);
+    if (!consulta.isPlaceholderData) topoRodape.current = null;
+  }, [pagina, linhas, consulta.isPlaceholderData]);
 
   // Resumo dos filtros dentro da pílula
   const ativos = [
@@ -668,7 +692,10 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
       <StatusConsulta consulta={consulta} nome="o histórico" />
 
       {/* Caixa com altura fixa: a página rola por dentro, sem empurrar o painel */}
-      <div className="mt-4 h-[460px] overflow-y-auto rounded-2xl border border-border/50 bg-field/30">
+      <div
+        ref={caixaRef}
+        className="mt-4 h-[min(460px,65svh)] overflow-y-auto overscroll-contain rounded-2xl border border-border/50 bg-field/30 [overflow-anchor:none]"
+      >
         {grupos.map(([dia, registros]) => (
           <div key={dia}>
             <p className="sticky top-0 z-10 border-b border-border/40 bg-card/95 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground backdrop-blur">
@@ -763,16 +790,13 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+      <div ref={rodapeRef} className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
         <span>
           {total ? `${inicio}–${fim} de ${total} registros` : "Sem registros"} • clique em um item para ver o que mudou
         </span>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              setPagina((p) => p - 1);
-              setAberto(null);
-            }}
+            onClick={() => mudarPagina(pagina - 1)}
             disabled={pagina <= 1}
             aria-label="Mais recentes"
             className="flex h-8 w-8 items-center justify-center rounded-full border border-border/70 hover:text-foreground disabled:opacity-40"
@@ -783,10 +807,7 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
             {pagina} / {totalPaginas}
           </span>
           <button
-            onClick={() => {
-              setPagina((p) => p + 1);
-              setAberto(null);
-            }}
+            onClick={() => mudarPagina(pagina + 1)}
             disabled={pagina >= totalPaginas}
             aria-label="Mais antigos"
             className="flex h-8 w-8 items-center justify-center rounded-full border border-border/70 hover:text-foreground disabled:opacity-40"
@@ -891,20 +912,21 @@ function Restauracao({ confirmar }: { confirmar: Props["confirmar"] }) {
         {(pontos.data ?? []).map((p) => (
           <li
             key={p.id}
-            className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/50 bg-field/40 px-5 py-4"
+            className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-field/40 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
           >
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] text-foreground">{p.motivo}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="break-words text-[15px] text-foreground">{p.motivo}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                 {new Date(p.criado_em).toLocaleString("pt-BR")}
                 {p.criado_por_email && ` • por ${p.criado_por_email}`}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{resumoTexto(p.resumo)}</p>
             </div>
+            <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => restaurar(p)}
               disabled={restaurando !== null}
-              className="flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-50"
+              className="flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 text-sm text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-50 sm:flex-none"
             >
               {restaurando === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
               {restaurando === p.id ? "Restaurando…" : "Restaurar"}
@@ -917,6 +939,7 @@ function Restauracao({ confirmar }: { confirmar: Props["confirmar"] }) {
             >
               <Trash2 className="h-4 w-4" />
             </button>
+            </div>
           </li>
         ))}
         {pontos.isSuccess && pontos.data.length === 0 && (
@@ -957,7 +980,7 @@ function Congelar({ congelado, confirmar }: { congelado: boolean; confirmar: Pro
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-border/50 bg-field/40 px-5 py-5">
+    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/50 bg-field/40 px-4 py-5 sm:gap-5 sm:px-5">
       <span
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
           congelado ? "bg-sky-400/15 text-sky-300" : "bg-secondary text-muted-foreground"
@@ -976,7 +999,7 @@ function Congelar({ congelado, confirmar }: { congelado: boolean; confirmar: Pro
       <button
         onClick={alternar}
         disabled={salvando}
-        className={`flex h-10 items-center gap-2 rounded-full px-5 text-sm transition-colors disabled:opacity-50 ${
+        className={`flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 text-sm transition-colors disabled:opacity-50 sm:w-auto ${
           congelado
             ? "border border-border/70 text-muted-foreground hover:text-foreground"
             : "bg-primary text-primary-foreground hover:bg-primary-glow"

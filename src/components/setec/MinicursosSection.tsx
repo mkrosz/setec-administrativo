@@ -158,7 +158,7 @@ export function MinicursosSection({
                     <span className="hidden md:inline">{esgotado ? "esgotado" : "inscritos"}</span>
                   </button>
                   <Travado>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                  <div className="flex items-center gap-1 acoes-hover">
                     <button
                       aria-label="Editar minicurso"
                       onClick={() => {

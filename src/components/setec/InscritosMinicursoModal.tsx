@@ -300,7 +300,7 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
             }
           }}
           className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1000px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
-          <div className="flex items-start justify-between gap-4 px-7 pb-4 pt-5">
+          <div className="flex items-start justify-between gap-4 px-5 sm:px-7 pb-4 pt-5">
             <div className="min-w-0">
               <Dialog.Title className="font-display text-2xl font-bold text-foreground">
                 Inscritos
@@ -341,7 +341,7 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
           </div>
           <div className="border-t border-border/60" />
 
-          <div className="flex flex-wrap items-center gap-3 px-7 py-4">
+          <div className="flex flex-wrap items-center gap-3 px-5 sm:px-7 py-4">
             <div className="relative min-w-48 flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -453,7 +453,7 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
             </form>
           )}
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 sm:px-7 pb-6">
             {inscritos.isLoading ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
             ) : inscritos.isError ? (
@@ -597,7 +597,7 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
                         {formatDataHora(i.created_at)}
                       </td>
                       <td className="py-3 text-right">
-                        <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                        <div className="flex items-center justify-end gap-0.5 acoes-hover">
                           <button
                             aria-label={`Editar ${i.nome_completo}`}
                             title="Corrigir nome, RA, e-mail ou turma"

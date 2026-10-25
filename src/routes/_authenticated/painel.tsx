@@ -464,9 +464,12 @@ function Painel() {
   }
 
   const PAGE = 3;
-  // Apoiadores: cabe uma linha inteira de logos antes de paginar
+  // Apoiadores: cabe uma linha inteira de logos antes de paginar; no celular (um por linha)
+  // os logos ficam um embaixo do outro, três por página
   const apoiadoresRef = useRef<HTMLDivElement>(null);
-  const porPaginaApoiadores = useCabemNaLinha(apoiadoresRef, LOGO_LARGURA, LOGO_GAP);
+  const logosPorLinha = useCabemNaLinha(apoiadoresRef, LOGO_LARGURA, LOGO_GAP);
+  const empilharApoiadores = logosPorLinha === 1;
+  const porPaginaApoiadores = empilharApoiadores ? 3 : logosPorLinha;
 
   // Agrupa por data (sem data numa aba no fim, rascunhos em "Rascunhos")
   const diasPalestras = useMemo(() => agruparPorDia(palestras.data ?? []), [palestras.data]);
@@ -581,28 +584,31 @@ function Painel() {
   return (
     <>
       <CongeladoContext.Provider value={bloqueadoPorCongelamento}>
-      <main className="relative min-h-screen overflow-hidden bg-background px-6 pb-24 pt-8 md:px-16">
+      <main className="relative min-h-screen overflow-hidden bg-background px-4 pb-24 pt-8 sm:px-6 md:px-16">
         <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
           <SetecLogo />
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Ações do painel: no celular ficam numa linha própria abaixo do logo */}
+          <div className="order-last flex w-full flex-wrap items-center gap-2 sm:order-none sm:ml-auto sm:w-auto sm:gap-3">
             {isAdmin && (
             <Travado>
             <button
               onClick={() => setResetOpen(true)}
-              className="flex h-10 items-center gap-2 rounded-full border border-destructive/60 px-5 text-sm text-destructive transition-colors hover:bg-destructive/10"
+              aria-label="Resetar dados do ano"
+              title="Resetar dados do ano"
+              className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-destructive/60 text-sm text-destructive transition-colors hover:bg-destructive/10 sm:w-auto sm:px-5"
             >
               <RotateCcw className="h-4 w-4" />
-              Resetar dados do ano
+              <span className="hidden sm:inline">Resetar dados do ano</span>
             </button>
             </Travado>
             )}
-            <div className="flex items-center gap-2">
+            <div className="contents sm:flex sm:items-center sm:gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     disabled={ocupado}
                     aria-label="Exportar dados"
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
                   >
                     <Download className="h-4 w-4" />
                   </button>
@@ -642,7 +648,7 @@ function Painel() {
                 onClick={() => importRef.current?.click()}
                 disabled={ocupado}
                 aria-label="Importar dados"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
               >
                 <Upload className="h-4 w-4" />
               </button>
@@ -662,36 +668,40 @@ function Painel() {
               <Travado>
               <button
                 onClick={() => updateConfig({ evento_ativo: !eventoAtivo })}
-                className={`flex h-10 items-center gap-2 rounded-full px-5 text-sm transition-colors ${
+                className={`flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 text-sm transition-colors sm:flex-none sm:px-5 ${
                   eventoAtivo
                     ? "bg-primary/20 text-primary-glow hover:bg-primary/30"
                     : "border border-border/70 text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                {eventoAtivo ? "Evento ativo" : "Evento oculto"}
+                <span className="sm:hidden">{eventoAtivo ? "Ativo" : "Oculto"}</span>
+                <span className="hidden sm:inline">{eventoAtivo ? "Evento ativo" : "Evento oculto"}</span>
               </button>
               </Travado>
               ) : (
                 <span
                   title="Apenas administradores podem ativar ou desativar o evento"
-                  className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground"
+                  className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground sm:flex-none sm:px-5"
                 >
                   {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  {eventoAtivo ? "Evento ativo" : "Evento oculto"}
+                  <span className="sm:hidden">{eventoAtivo ? "Ativo" : "Oculto"}</span>
+                <span className="hidden sm:inline">{eventoAtivo ? "Evento ativo" : "Evento oculto"}</span>
                 </span>
               )}
             </div>
             {isAdmin && (
             <Link
               to="/presenca"
-              className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+              className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none sm:px-5"
             >
               <ClipboardCheck className="h-4 w-4" />
               Presença
             </Link>
             )}
-            <span className="h-7 w-px bg-border" />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden h-7 w-px bg-border sm:block" />
             <button
               onClick={toggle}
               aria-label="Alternar tema"
@@ -729,7 +739,7 @@ function Painel() {
         )}
 
         <div className="relative mx-auto mt-14 max-w-290">
-          <h1 className="title-gradient font-display text-6xl font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
+          <h1 className="title-gradient font-display text-[clamp(1.75rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
             Painel
             <br />
             Administrativo
@@ -744,7 +754,7 @@ function Painel() {
             <Settings className="h-5 w-5 text-primary-glow" />
             Informações do Evento
           </h2>
-          <section className="panel-surface mt-5 p-7">
+          <section className="panel-surface mt-5 p-4 sm:p-7">
             <StatusConsulta consulta={config} nome="as informações do evento" />
             <span className="text-xs text-muted-foreground">Logo do Evento</span>
             <Travado>
@@ -815,7 +825,7 @@ function Painel() {
             <Mic className="h-5 w-5 text-primary-glow" />
             Gerenciar Programação
           </h2>
-          <section className="panel-surface mt-5 p-7">
+          <section className="panel-surface mt-5 p-4 sm:p-7">
             {/* Linha de abas: dias (palestras) à esquerda, palestras/minicursos à direita */}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b border-border/40 pb-4">
               <div className="flex flex-wrap gap-8">
@@ -929,7 +939,7 @@ function Painel() {
                     </p>
                   </div>
                   <Travado>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-1 acoes-hover">
                     <button
                       aria-label="Editar palestra"
                       onClick={() => {
@@ -984,7 +994,7 @@ function Painel() {
             <Handshake className="h-5 w-5 text-primary-glow" />
             Apoiadores
           </h2>
-          <section className="panel-surface mt-5 p-7">
+          <section className="panel-surface mt-5 p-4 sm:p-7">
             <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
               {NIVEIS.map((n) => (
                 <button
@@ -1009,7 +1019,9 @@ function Painel() {
               {apoiadoresPagina.map((s) => (
                 <div
                   key={s.id}
-                  className="group relative h-23.75 w-48.75 overflow-hidden rounded-lg border border-border/60 bg-field"
+                  className={`group relative h-23.75 overflow-hidden rounded-lg border border-border/60 bg-field ${
+                    empilharApoiadores ? "w-full" : "w-48.75"
+                  }`}
                 >
                   <StorageImage
                     path={s.logo_url}
@@ -1022,7 +1034,7 @@ function Painel() {
                     }
                   />
                   <Travado>
-                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/80 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/80 to-transparent p-1.5 acoes-hover">
                     <button
                       aria-label="Editar apoiador"
                       onClick={() => {
@@ -1071,7 +1083,7 @@ function Painel() {
             <Users className="h-5 w-5 text-primary-glow" />
             Comissão
           </h2>
-          <section className="panel-surface mt-5 p-7">
+          <section className="panel-surface mt-5 p-4 sm:p-7">
             <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
               {GRUPOS_COMISSAO.map((g) => {
                 const total = (comissao.data ?? []).filter((m) => m.grupo === g.value).length;
@@ -1135,7 +1147,7 @@ function Painel() {
                             </p>
                           </div>
                           <Travado>
-                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                          <div className="flex shrink-0 items-center gap-0.5 acoes-hover">
                             <button
                               aria-label="Editar membro"
                               onClick={() => {
@@ -1190,7 +1202,7 @@ function Painel() {
                 <ShieldCheck className="h-5 w-5 text-primary-glow" />
                 Controle de Acessos
               </h2>
-              <section className="panel-surface mt-5 p-7">
+              <section className="panel-surface mt-5 p-4 sm:p-7">
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {acessoTotal
                     ? "Libere ou bloqueie o acesso ao painel e defina o nível de cada conta. Usuários comuns gerenciam o evento, mas não acessam o Controle de Acessos nem a lista de presença."
@@ -1252,16 +1264,19 @@ function Painel() {
                           )}
                         </span>
                       )}
+                      {/* No celular os controles ocupam uma linha só, abaixo do e-mail */}
+                      <div className="flex w-full items-center gap-2 sm:w-auto">
                       <Travado>
                       {isMaster && editavel && c.ativo && !temporario && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
                               title="Conceder acesso total temporário"
-                              className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-4 text-sm text-muted-foreground transition-colors hover:border-amber-400/60 hover:text-foreground"
+                              aria-label="Conceder acesso total temporário"
+                              className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-border/70 text-sm text-muted-foreground transition-colors hover:border-amber-400/60 hover:text-foreground sm:w-auto sm:px-4"
                             >
                               <Zap className="h-4 w-4" />
-                              Acesso total
+                              <span className="hidden sm:inline">Acesso total</span>
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -1279,14 +1294,14 @@ function Painel() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
-                      <div className="relative shrink-0">
+                      <div className="relative min-w-0 flex-1 sm:flex-none">
                         <select
                           aria-label={`Nível de ${c.email}`}
                           value={c.role}
                           disabled={!podeGerenciar}
                           title={podeGerenciar ? undefined : "Só a conta master pode mudar o nível"}
                           onChange={(e) => atualizarAcesso(c.id, { role: e.target.value as AppRole })}
-                          className="field-pill h-10 appearance-none py-0 pl-4 pr-10 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                          className="field-pill h-10 w-full appearance-none py-0 pl-4 pr-10 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                         >
                           <option value="admin">Administrador</option>
                           <option value="user">Usuário comum</option>
@@ -1297,14 +1312,15 @@ function Painel() {
                         onClick={() => atualizarAcesso(c.id, { ativo: !c.ativo })}
                         disabled={!podeAtivar}
                         title={podeAtivar ? undefined : "Só a conta master pode desativar contas"}
-                        className={`flex h-10 items-center gap-2 rounded-full px-5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        aria-label={c.ativo ? "Desativar" : "Liberar"}
+                        className={`flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm transition-colors sm:px-5 disabled:cursor-not-allowed disabled:opacity-50 ${
                           c.ativo
                             ? "border border-border/70 text-muted-foreground hover:text-foreground"
                             : "bg-primary text-primary-foreground hover:bg-primary-glow"
                         }`}
                       >
                         {c.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                        {c.ativo ? "Desativar" : "Liberar"}
+                        <span className={c.ativo ? "hidden sm:inline" : undefined}>{c.ativo ? "Desativar" : "Liberar"}</span>
                       </button>
                       {acessoTotal && (
                         <button
@@ -1327,6 +1343,7 @@ function Painel() {
                         <Trash2 className="h-4 w-4" />
                       </button>
                       </Travado>
+                      </div>
                     </li>
                     );
                   })}

@@ -53,14 +53,14 @@ export function TurmasModal({ open, onOpenChange, turmas, onSaved }: Props) {
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(480px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[92dvh] w-[min(480px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <Dialog.Close
             aria-label="Fechar"
             className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Dialog.Close>
-          <div className="px-7 pb-4 pt-5">
+          <div className="px-5 pb-4 pt-5 sm:px-7">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
               Turmas
             </Dialog.Title>
@@ -71,7 +71,7 @@ export function TurmasModal({ open, onOpenChange, turmas, onSaved }: Props) {
           </div>
           <div className="border-t border-border/60" />
 
-          <div className="space-y-5 px-7 py-5">
+          <div className="space-y-5 px-5 sm:px-7 py-5">
             <div className="flex flex-wrap gap-2">
               {turmas.map((t) => (
                 <span
@@ -104,12 +104,12 @@ export function TurmasModal({ open, onOpenChange, turmas, onSaved }: Props) {
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex.: 3º ano, Logística"
                 aria-label="Nome da nova turma"
-                className="field-pill h-10 flex-1 px-4 text-sm"
+                className="field-pill h-10 min-w-0 flex-1 px-4 text-sm"
               />
               <button
                 type="submit"
                 disabled={saving || !nome.trim()}
-                className="flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
+                className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium sm:px-5 text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -351,7 +351,7 @@ export function PalestraModal({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(900px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
-          <div className="px-7 pb-4 pt-5">
+          <div className="px-5 pb-4 pt-5 sm:px-7">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
               {palestra?.rascunho ? "Editar rascunho" : palestra ? `Editar ${t.nome.toLowerCase()}` : `Adicionar ${t.nome.toLowerCase()}`}
             </Dialog.Title>
@@ -365,7 +365,7 @@ export function PalestraModal({
           </div>
           <div className="border-t border-border/60" />
 
-          <form id="palestra-form" onSubmit={onSubmit} className="space-y-4 px-7 py-5">
+          <form id="palestra-form" onSubmit={onSubmit} className="space-y-4 px-5 sm:px-7 py-5">
             <div className="space-y-1.5">
               <span className={label}>{t.titulo}</span>
               <input
@@ -683,7 +683,7 @@ export function PalestraModal({
           </form>
 
           <div className="border-t border-border/60" />
-          <div className="flex items-center justify-end gap-4 px-7 py-4">
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 px-5 py-4 sm:px-7">
             <Dialog.Close className="text-sm font-medium text-foreground/90 transition-opacity hover:opacity-70">
               Cancelar
             </Dialog.Close>
@@ -694,7 +694,7 @@ export function PalestraModal({
                 type="button"
                 onClick={() => save(true)}
                 disabled={saving}
-                className="flex h-11 items-center justify-center rounded-full border border-border/70 px-6 text-sm font-medium text-foreground transition-colors hover:border-primary/60 disabled:opacity-60"
+                className="flex h-11 flex-auto items-center justify-center whitespace-nowrap rounded-full sm:flex-none border border-border/70 px-6 text-sm font-medium text-foreground transition-colors hover:border-primary/60 disabled:opacity-60"
               >
                 {palestra?.rascunho ? "Salvar rascunho" : "Salvar como rascunho"}
               </button>
@@ -704,7 +704,7 @@ export function PalestraModal({
               type="submit"
               form="palestra-form"
               disabled={saving}
-              className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
+              className="flex h-11 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full sm:flex-none bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {palestra?.rascunho ? "Publicar" : palestra ? "Salvar alterações" : `Salvar ${t.nome.toLowerCase()}`}

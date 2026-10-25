@@ -124,7 +124,7 @@ function Perfil() {
           <UserRound className="h-5 w-5 text-primary-glow" />
           Dados da conta
         </h2>
-        <section className="panel-surface mt-5 max-w-2xl p-7">
+        <section className="panel-surface mt-5 max-w-2xl p-4 sm:p-7">
           <div className="flex h-[74px] flex-col justify-center gap-1 rounded-2xl border border-border/60 bg-field/60 px-5">
             <span className={fieldLabel}>E-mail cadastrado</span>
             <span className="flex items-center gap-2 text-[15px] text-foreground">
@@ -138,7 +138,7 @@ function Perfil() {
           <Lock className="h-5 w-5 text-primary-glow" />
           Alterar senha
         </h2>
-        <form onSubmit={trocarSenha} className="panel-surface mt-5 max-w-2xl p-7">
+        <form onSubmit={trocarSenha} className="panel-surface mt-5 max-w-2xl p-4 sm:p-7">
           <div className="grid gap-4">
             <PasswordField
               label="Senha atual"
@@ -169,7 +169,7 @@ function Perfil() {
           <Trash2 className="h-5 w-5" />
           Excluir perfil
         </h2>
-        <section className="panel-surface mt-5 max-w-2xl border-destructive/40 p-7">
+        <section className="panel-surface mt-5 max-w-2xl border-destructive/40 p-4 sm:p-7">
           <p className="text-sm leading-relaxed text-muted-foreground">
             A exclusão remove permanentemente sua conta de acesso ao painel. Os dados do evento
             (palestras e apoiadores) permanecem cadastrados.

@@ -71,7 +71,7 @@ export function PatrocinadorModal({
             Informe a empresa, o logotipo e o nível de apoio.
           </Dialog.Description>
 
-          <form id="apoiador-form" onSubmit={onSubmit} className="space-y-5 px-8 pb-7 pt-8">
+          <form id="apoiador-form" onSubmit={onSubmit} className="space-y-5 px-5 pb-7 pt-8 sm:px-8">
             <div className="space-y-2">
               <span className={label}>Nome da Empresa</span>
               <input
@@ -129,7 +129,7 @@ export function PatrocinadorModal({
           </form>
 
           <div className="border-t border-border/60" />
-          <div className="flex items-center justify-end gap-6 px-8 py-5">
+          <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 px-5 py-5 sm:px-8">
             <Dialog.Close className="text-sm font-semibold text-foreground/90 transition-opacity hover:opacity-70">
               Cancelar
             </Dialog.Close>
@@ -137,7 +137,7 @@ export function PatrocinadorModal({
               type="submit"
               form="apoiador-form"
               disabled={saving}
-              className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
+              className="flex h-11 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full sm:flex-none bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : !patrocinador && <Plus className="h-4 w-4" />}
               {patrocinador ? "Salvar alterações" : "Adicionar apoiador"}

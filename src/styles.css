@@ -177,6 +177,18 @@
   background-clip: padding-box;
 }
 
+/* Ações que só aparecem ao passar o mouse; no celular (sem hover) ficam sempre visíveis */
+@media (hover: hover) and (pointer: fine) {
+  .acoes-hover {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .group:hover .acoes-hover,
+  .acoes-hover:focus-within {
+    opacity: 1;
+  }
+}
+
 /* Painel congelado: controles de edição escuros e sem interação (ver Travado.tsx) */
 .painel-travado {
   display: contents;
