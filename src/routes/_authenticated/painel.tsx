@@ -6,6 +6,7 @@ import {
   CirclePlus,
   ChevronDown,
   ClipboardCheck,
+  Crown,
   Download,
   Eye,
   EyeOff,
@@ -56,7 +57,6 @@ import {
   registrarAtividade,
   resumoBackup,
 } from "@/lib/backup";
-import { MasterSection } from "@/components/setec/MasterSection";
 import { CongeladoContext, Travado } from "@/components/setec/Travado";
 import {
   NIVEIS,
@@ -701,6 +701,17 @@ function Painel() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            {isMaster && (
+            <Link
+              to="/master"
+              aria-label="Área da Master"
+              title="Área da Master"
+              className="flex h-9 w-9 items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 text-sm text-primary-glow transition-colors hover:bg-primary/20 sm:h-10 sm:w-auto sm:px-5"
+            >
+              <Crown className="h-4 w-4" />
+              <span className="hidden sm:inline">Master</span>
+            </Link>
+            )}
             <span className="hidden h-7 w-px bg-border sm:block" />
             <button
               onClick={toggle}
@@ -1189,11 +1200,6 @@ function Painel() {
             </button>
             </Travado>
           </section>
-
-          {/* Área da Master — só a conta master */}
-          {isMaster && (
-            <MasterSection contas={listaAcessos} congelado={congelado} confirmar={confirmar} />
-          )}
 
           {/* Controle de Acessos — administradores, master e quem tem acesso total temporário */}
           {veAcessos && (

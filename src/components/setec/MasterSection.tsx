@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Crown,
   History,
   Loader2,
   Lock,
@@ -56,15 +55,11 @@ const ABAS: { valor: Aba; rotulo: string; detalhe: string; icone: typeof History
   { valor: "transferir", rotulo: "Transferir master", detalhe: "Troca de gestão", icone: ArrowRightLeft },
 ];
 
-/** Funções exclusivas da conta master. */
+/** Funções exclusivas da conta master (página /master). */
 export function MasterSection({ contas, congelado, confirmar }: Props) {
   const [aba, setAba] = useState<Aba>("historico");
   return (
     <>
-      <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
-        <Crown className="h-5 w-5 text-primary-glow" />
-        Área da Master
-      </h2>
       <section className="panel-surface mt-5 overflow-hidden p-0">
         <div className="grid lg:grid-cols-[230px_1fr]">
           {/* Navegação: coluna no desktop, faixa rolável no celular */}
