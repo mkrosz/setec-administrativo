@@ -452,7 +452,7 @@ function PresencaPage() {
       </header>
 
       <div className="relative mx-auto mt-14 max-w-290">
-        <h1 className="title-gradient font-display text-[clamp(1.75rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
+        <h1 className="title-gradient font-display text-[clamp(1.5rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] lg:text-[68px]">
           Lista de
           <br />
           Presença

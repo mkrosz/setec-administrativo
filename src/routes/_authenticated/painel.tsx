@@ -587,8 +587,8 @@ function Painel() {
       <main className="relative min-h-screen overflow-hidden bg-background px-4 pb-24 pt-8 sm:px-6 md:px-16">
         <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
           <SetecLogo />
-          {/* Ações do painel: no celular ficam numa linha própria abaixo do logo */}
-          <div className="order-last flex w-full flex-wrap items-center gap-2 sm:order-none sm:ml-auto sm:w-auto sm:gap-3">
+          {/* Ações do painel: no celular e no tablet ficam numa linha própria abaixo do logo */}
+          <div className="order-last flex w-full flex-wrap items-center gap-2 sm:gap-3 xl:order-none xl:ml-auto xl:w-auto">
             {isAdmin && (
             <Travado>
             <button
@@ -693,14 +693,16 @@ function Painel() {
             {isAdmin && (
             <Link
               to="/presenca"
+              aria-label="Presença"
+              title="Presença"
               className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none sm:px-5"
             >
               <ClipboardCheck className="h-4 w-4" />
-              Presença
+              <span className="hidden min-[400px]:inline">Presença</span>
             </Link>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isMaster && (
             <Link
               to="/master"
@@ -712,7 +714,7 @@ function Painel() {
               <span className="hidden sm:inline">Master</span>
             </Link>
             )}
-            <span className="hidden h-7 w-px bg-border sm:block" />
+            <span className="hidden h-7 w-px bg-border xl:block" />
             <button
               onClick={toggle}
               aria-label="Alternar tema"
@@ -750,7 +752,7 @@ function Painel() {
         )}
 
         <div className="relative mx-auto mt-14 max-w-290">
-          <h1 className="title-gradient font-display text-[clamp(1.75rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] md:text-[68px]">
+          <h1 className="title-gradient font-display text-[clamp(1.5rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] lg:text-[68px]">
             Painel
             <br />
             Administrativo

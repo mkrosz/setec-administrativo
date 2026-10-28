@@ -65,7 +65,7 @@ export function PatrocinadorModal({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(508px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[22px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(508px,94vw)] -translate-x-1/2 -translate-y-1/2 max-h-[92dvh] overflow-y-auto rounded-[22px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <Dialog.Title className="sr-only">{patrocinador ? "Editar apoiador" : "Adicionar apoiador"}</Dialog.Title>
           <Dialog.Description className="sr-only">
             Informe a empresa, o logotipo e o nível de apoio.
