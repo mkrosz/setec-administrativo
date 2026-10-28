@@ -9,9 +9,9 @@ esteja sempre funcionando (ela sincroniza com o Lovable).
 ```bash
 git clone https://github.com/mkrosz/setec-administrativo.git
 cd setec-administrativo
-npm install
+pnpm install
 cp .env.example .env   # preencha com as chaves do Supabase (peça a um admin)
-npm run dev
+pnpm dev
 ```
 
 Configure sua identidade no Git (apenas uma vez por máquina ou por repositório):
@@ -27,12 +27,12 @@ git config user.email "seu-email-do-github@exemplo.com"
 2. **Atualize a `main`**: `git checkout main && git pull`.
 3. **Crie uma branch** a partir da `main`:
 
-   | Tipo            | Padrão de nome               | Exemplo                       |
-   | --------------- | ---------------------------- | ----------------------------- |
-   | Funcionalidade  | `feat/<descricao-curta>`     | `feat/exportar-presencas`     |
-   | Correção        | `fix/<descricao-curta>`      | `fix/qr-code-celular`         |
-   | Documentação    | `docs/<descricao-curta>`     | `docs/guia-de-deploy`         |
-   | Manutenção      | `chore/<descricao-curta>`    | `chore/atualiza-dependencias` |
+   | Tipo           | Padrão de nome            | Exemplo                       |
+   | -------------- | ------------------------- | ----------------------------- |
+   | Funcionalidade | `feat/<descricao-curta>`  | `feat/exportar-presencas`     |
+   | Correção       | `fix/<descricao-curta>`   | `fix/qr-code-celular`         |
+   | Documentação   | `docs/<descricao-curta>`  | `docs/guia-de-deploy`         |
+   | Manutenção     | `chore/<descricao-curta>` | `chore/atualiza-dependencias` |
 
 4. **Faça commits pequenos** seguindo o padrão abaixo.
 5. **Envie a branch**: `git push -u origin <nome-da-branch>`.
@@ -49,16 +49,16 @@ git config user.email "seu-email-do-github@exemplo.com"
 <tipo>: <descrição no imperativo, em minúsculas>
 ```
 
-| Tipo       | Quando usar                                  |
-| ---------- | -------------------------------------------- |
-| `feat`     | Nova funcionalidade                          |
-| `fix`      | Correção de bug                              |
-| `docs`     | Apenas documentação                          |
-| `style`    | Formatação, sem mudança de lógica            |
-| `refactor` | Mudança de código sem alterar comportamento  |
-| `test`     | Adição ou ajuste de testes                   |
-| `chore`    | Build, dependências, configurações           |
-| `ci`       | Pipelines de integração contínua             |
+| Tipo       | Quando usar                                 |
+| ---------- | ------------------------------------------- |
+| `feat`     | Nova funcionalidade                         |
+| `fix`      | Correção de bug                             |
+| `docs`     | Apenas documentação                         |
+| `style`    | Formatação, sem mudança de lógica           |
+| `refactor` | Mudança de código sem alterar comportamento |
+| `test`     | Adição ou ajuste de testes                  |
+| `chore`    | Build, dependências, configurações          |
+| `ci`       | Pipelines de integração contínua            |
 
 Exemplos:
 
@@ -71,11 +71,12 @@ docs: documenta variáveis de ambiente
 ## 4. Antes de abrir o Pull Request
 
 ```bash
-npm run lint
-npm run build
+pnpm lint
+pnpm build
 ```
 
 - O código compila e o lint passa sem erros.
+- O CI (GitHub Actions) está verde no Pull Request.
 - Nenhum dado sensível (`.env`, chaves, senhas) foi commitado.
 - A mudança foi testada no navegador (desktop e celular, quando houver tela).
 

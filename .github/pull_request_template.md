@@ -20,7 +20,8 @@ Closes #
 
 ## Checklist
 
-- [ ] `npm run lint` passa sem erros
-- [ ] `npm run build` conclui com sucesso
+- [ ] `pnpm lint` passa sem erros
+- [ ] `pnpm build` conclui com sucesso
+- [ ] CI verde no Pull Request
 - [ ] Testei no navegador (desktop e celular, se houver tela)
 - [ ] Nenhum dado sensível foi commitado
