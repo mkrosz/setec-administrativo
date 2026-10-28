@@ -48,7 +48,8 @@ function mesIndex(nome: string | undefined) {
 /** Lê o texto salvo ("05 - 09 de Outubro", "15 a 19 de Maio"...) para pré-selecionar o calendário. */
 function lerDatas(texto: string, ano: number): DateRange | undefined {
   const t = texto.trim();
-  const intervalo = /^(\d{1,2})(?:\s+de\s+([\p{L}]+))?\s*(?:-|–|a|até)\s*(\d{1,2})\s+de\s+([\p{L}]+)/iu.exec(t);
+  const intervalo =
+    /^(\d{1,2})(?:\s+de\s+([\p{L}]+))?\s*(?:-|–|a|até)\s*(\d{1,2})\s+de\s+([\p{L}]+)/iu.exec(t);
   if (intervalo) {
     const mesTo = mesIndex(intervalo[4]);
     const mesFrom = intervalo[2] ? mesIndex(intervalo[2]) : mesTo;
@@ -129,7 +130,8 @@ export function DataEventoField({
           numberOfMonths={1}
           formatters={{
             // Cabeçalho do calendário com inicial maiúscula ("Outubro 2026")
-            formatCaption: (d) => `${MESES[d.getMonth()]!.replace(/^./, (c) => c.toUpperCase())} ${d.getFullYear()}`,
+            formatCaption: (d) =>
+              `${MESES[d.getMonth()]!.replace(/^./, (c) => c.toUpperCase())} ${d.getFullYear()}`,
           }}
           className="bg-transparent p-0 [--cell-size:2.25rem]"
         />

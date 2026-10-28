@@ -40,7 +40,9 @@ const pill = "field-pill h-10 w-full px-4 text-sm";
 type Dados = { nome: string; ra: string; email: string; turma: string };
 
 /** Limpa e valida os dados digitados; devolve a mensagem de erro ou os dados prontos para salvar. */
-function validar(d: Dados): { erro: string } | { nome: string; ra: string; email: string; turma: string } {
+function validar(
+  d: Dados,
+): { erro: string } | { nome: string; ra: string; email: string; turma: string } {
   const nome = d.nome.trim().replace(/\s+/g, " ");
   const ra = d.ra.replace(/\D/g, "");
   const email = d.email.trim().toLowerCase();
@@ -83,8 +85,7 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
       return (data ?? []) as unknown as InscricaoMinicurso[];
     },
     // Enquanto algum e-mail recente estiver "enviando", atualiza a lista para mostrar o resultado
-    refetchInterval: (q) =>
-      (q.state.data ?? []).some((i) => emailPendente(i)) ? 4000 : false,
+    refetchInterval: (q) => ((q.state.data ?? []).some((i) => emailPendente(i)) ? 4000 : false),
   });
 
   const turmas = useQuery({
@@ -164,9 +165,13 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
         origem: "manual",
       } as any);
       if (error) {
-        throw error.code === "23505" ? new Error("Este RA já está inscrito neste minicurso") : error;
+        throw error.code === "23505"
+          ? new Error("Este RA já está inscrito neste minicurso")
+          : error;
       }
-      toast.success("Inscrito adicionado", { description: `O e-mail de confirmação será enviado para ${email}` });
+      toast.success("Inscrito adicionado", {
+        description: `O e-mail de confirmação será enviado para ${email}`,
+      });
       setNovo((n) => ({ nome: "", ra: "", email: "", turma: n.turma }));
       atualizar();
     } catch (err) {
@@ -185,8 +190,8 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
       titulo: "Confira o e-mail",
       descricao: (
         <>
-          <strong className="text-foreground">{email}</strong> parece ter um erro de digitação. Você quis dizer{" "}
-          <strong className="text-foreground">{sugestao}</strong>?
+          <strong className="text-foreground">{email}</strong> parece ter um erro de digitação. Você
+          quis dizer <strong className="text-foreground">{sugestao}</strong>?
         </>
       ),
       confirmar: `Usar ${sugestao.split("@")[1]}`,
@@ -220,7 +225,9 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
     setSalvandoEdicao(false);
     if (error) {
       toast.error(
-        error.code === "23505" ? "Este RA já está inscrito neste minicurso" : mensagemErro(error, "Erro ao salvar"),
+        error.code === "23505"
+          ? "Este RA já está inscrito neste minicurso"
+          : mensagemErro(error, "Erro ao salvar"),
       );
       return;
     }
@@ -234,8 +241,9 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
         titulo: "Enviar confirmação para o novo e-mail?",
         descricao: (
           <>
-            O e-mail de confirmação da inscrição foi para <strong className="text-foreground">{i.email}</strong>.
-            Enviar agora para <strong className="text-foreground">{email}</strong>?
+            O e-mail de confirmação da inscrição foi para{" "}
+            <strong className="text-foreground">{i.email}</strong>. Enviar agora para{" "}
+            <strong className="text-foreground">{email}</strong>?
           </>
         ),
         confirmar: "Enviar",
@@ -261,14 +269,17 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
       titulo: "Remover inscrição",
       descricao: (
         <>
-          <strong className="text-foreground">{i.nome_completo}</strong> (RA {i.ra}) sai da lista de inscritos e a vaga
-          fica livre de novo.
+          <strong className="text-foreground">{i.nome_completo}</strong> (RA {i.ra}) sai da lista de
+          inscritos e a vaga fica livre de novo.
         </>
       ),
       confirmar: "Remover",
     });
     if (!ok) return;
-    const { error } = await supabase.from("minicurso_inscricoes" as any).delete().eq("id", i.id);
+    const { error } = await supabase
+      .from("minicurso_inscricoes" as any)
+      .delete()
+      .eq("id", i.id);
     if (error) {
       toast.error(mensagemErro(error));
       return;
@@ -299,7 +310,8 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
               setEditId(null);
             }
           }}
-          className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1000px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
+          className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1000px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]"
+        >
           <div className="flex items-start justify-between gap-4 px-5 sm:px-7 pb-4 pt-5">
             <div className="min-w-0">
               <Dialog.Title className="font-display text-2xl font-bold text-foreground">
@@ -507,7 +519,9 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
                                 inputMode="numeric"
                                 maxLength={20}
                                 value={edicao.ra}
-                                onChange={(e) => setEdicao({ ...edicao, ra: e.target.value.replace(/\D/g, "") })}
+                                onChange={(e) =>
+                                  setEdicao({ ...edicao, ra: e.target.value.replace(/\D/g, "") })
+                                }
                                 className={pill}
                               />
                             </div>
@@ -548,7 +562,8 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
                             <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-4">
                               <p className="text-xs text-muted-foreground">
                                 Inscrito em {formatDataHora(i.created_at)}
-                                {i.origem === "manual" ? " (manual)" : " pelo site"}. A data da inscrição não muda.
+                                {i.origem === "manual" ? " (manual)" : " pelo site"}. A data da
+                                inscrição não muda.
                               </p>
                               <div className="flex items-center gap-3">
                                 <button
@@ -572,50 +587,54 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
                         </td>
                       </tr>
                     ) : (
-                    <tr key={i.id} className="group">
-                      <td className="py-3 pr-3 tabular-nums text-muted-foreground">{lista.indexOf(i) + 1}</td>
-                      <td className="py-3 pr-3 text-foreground">
-                        {i.nome_completo}
-                        {i.origem === "manual" && (
-                          <span className="ml-2 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                            manual
-                          </span>
-                        )}
-                        <span className="block text-xs text-muted-foreground md:hidden">{i.email}</span>
-                      </td>
-                      <td className="py-3 pr-3 tabular-nums text-foreground">{i.ra}</td>
-                      <td className="hidden max-w-64 py-3 pr-3 text-muted-foreground md:table-cell">
-                        <span className="flex items-center gap-2">
-                          <StatusEmail inscricao={i} onReenviar={() => reenviar(i)} />
-                          <span className="truncate" title={i.email}>
+                      <tr key={i.id} className="group">
+                        <td className="py-3 pr-3 tabular-nums text-muted-foreground">
+                          {lista.indexOf(i) + 1}
+                        </td>
+                        <td className="py-3 pr-3 text-foreground">
+                          {i.nome_completo}
+                          {i.origem === "manual" && (
+                            <span className="ml-2 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                              manual
+                            </span>
+                          )}
+                          <span className="block text-xs text-muted-foreground md:hidden">
                             {i.email}
                           </span>
-                        </span>
-                      </td>
-                      <td className="py-3 pr-3 text-foreground">{i.turma}</td>
-                      <td className="hidden py-3 pr-3 tabular-nums text-muted-foreground lg:table-cell">
-                        {formatDataHora(i.created_at)}
-                      </td>
-                      <td className="py-3 text-right">
-                        <div className="flex items-center justify-end gap-0.5 acoes-hover">
-                          <button
-                            aria-label={`Editar ${i.nome_completo}`}
-                            title="Corrigir nome, RA, e-mail ou turma"
-                            onClick={() => editar(i)}
-                            className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            aria-label={`Remover ${i.nome_completo}`}
-                            onClick={() => remover(i)}
-                            className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="py-3 pr-3 tabular-nums text-foreground">{i.ra}</td>
+                        <td className="hidden max-w-64 py-3 pr-3 text-muted-foreground md:table-cell">
+                          <span className="flex items-center gap-2">
+                            <StatusEmail inscricao={i} onReenviar={() => reenviar(i)} />
+                            <span className="truncate" title={i.email}>
+                              {i.email}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="py-3 pr-3 text-foreground">{i.turma}</td>
+                        <td className="hidden py-3 pr-3 tabular-nums text-muted-foreground lg:table-cell">
+                          {formatDataHora(i.created_at)}
+                        </td>
+                        <td className="py-3 text-right">
+                          <div className="flex items-center justify-end gap-0.5 acoes-hover">
+                            <button
+                              aria-label={`Editar ${i.nome_completo}`}
+                              title="Corrigir nome, RA, e-mail ou turma"
+                              onClick={() => editar(i)}
+                              className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              aria-label={`Remover ${i.nome_completo}`}
+                              onClick={() => remover(i)}
+                              className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     ),
                   )}
                 </tbody>
@@ -632,11 +651,19 @@ export function InscritosMinicursoModal({ minicurso, onOpenChange }: Props) {
 /** E-mail ainda sem resultado, inscrito há menos de 2 minutos (o envio é assíncrono). */
 function emailPendente(i: InscricaoMinicurso) {
   if (i.email_enviado_em === undefined) return false; // SQL do e-mail ainda não rodado
-  return !i.email_enviado_em && !i.email_erro && Date.now() - new Date(i.created_at).getTime() < 120_000;
+  return (
+    !i.email_enviado_em && !i.email_erro && Date.now() - new Date(i.created_at).getTime() < 120_000
+  );
 }
 
 /** Ícone do envio do e-mail de confirmação (enviado, com erro ou enviando) + reenvio. */
-function StatusEmail({ inscricao: i, onReenviar }: { inscricao: InscricaoMinicurso; onReenviar: () => void }) {
+function StatusEmail({
+  inscricao: i,
+  onReenviar,
+}: {
+  inscricao: InscricaoMinicurso;
+  onReenviar: () => void;
+}) {
   if (i.email_enviado_em === undefined) return null;
   if (i.email_enviado_em) {
     return (

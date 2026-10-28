@@ -85,7 +85,10 @@ function baixar(blob: Blob, nome: string) {
 export async function exportarJSON() {
   const dados = await coletarDados();
   const stamp = new Date().toISOString().slice(0, 10);
-  baixar(new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" }), `setec-${stamp}.json`);
+  baixar(
+    new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" }),
+    `setec-${stamp}.json`,
+  );
 }
 
 const ROXO: [number, number, number] = [112, 72, 200];
@@ -220,7 +223,9 @@ export function gerarRelatorioPDF(dados: BackupData) {
     return mapa;
   };
   const presentesPorPalestra = contar((dados.presencas ?? []).map((p) => p.palestra_id));
-  const inscritosPorMinicurso = contar((dados.minicurso_inscricoes ?? []).map((i) => i.minicurso_id));
+  const inscritosPorMinicurso = contar(
+    (dados.minicurso_inscricoes ?? []).map((i) => i.minicurso_id),
+  );
   const totalPalestrantes = new Set(
     publicadas
       .flatMap((p) => palestrantesDe(p).map((sp) => sp.nome.trim().toLowerCase()))
@@ -286,7 +291,10 @@ export function gerarRelatorioPDF(dados: BackupData) {
           quebrar(`${sp.nome || "(Sem nome)"}${sp.cargo ? ` — ${sp.cargo}` : ""}`, wConteudo),
         );
         const temMeta = !!(it.meta || it.destaque);
-        const altura = Math.max(titulo.length * 14 + pessoas.length * 12.5 + (temMeta ? 13 : 0) + 14, 40);
+        const altura = Math.max(
+          titulo.length * 14 + pessoas.length * 12.5 + (temMeta ? 13 : 0) + 14,
+          40,
+        );
         garantir(altura);
 
         const topo = y;
@@ -338,7 +346,10 @@ export function gerarRelatorioPDF(dados: BackupData) {
         .filter(Boolean)
         .join(", ");
       fonte(9.5, "normal", CINZA);
-      const linhas = quebrar(`${it.titulo || "(Sem título)"}${nomes ? ` — ${nomes}` : ""}`, largura - 16);
+      const linhas = quebrar(
+        `${it.titulo || "(Sem título)"}${nomes ? ` — ${nomes}` : ""}`,
+        largura - 16,
+      );
       garantir(linhas.length * 12.5 + 4);
       linhas.forEach((l, i) => {
         doc.text(l, margem + 12, y + 9);
@@ -365,7 +376,9 @@ export function gerarRelatorioPDF(dados: BackupData) {
         hora_inicio: p.hora_inicio,
         hora_fim: p.hora_fim,
         meta: [p.local, p.categoria].filter(Boolean).join("  •  "),
-        destaque: presentes ? `${presentes} ${presentes === 1 ? "presente" : "presentes"}` : undefined,
+        destaque: presentes
+          ? `${presentes} ${presentes === 1 ? "presente" : "presentes"}`
+          : undefined,
       };
     }),
     "palestra",
@@ -396,7 +409,9 @@ export function gerarRelatorioPDF(dados: BackupData) {
       "minicursos",
     );
     if (rascunhosMini.length > 0) {
-      listaRascunhos(rascunhosMini.map((m) => ({ titulo: m.titulo, pessoas: m.ministrantes ?? [] })));
+      listaRascunhos(
+        rascunhosMini.map((m) => ({ titulo: m.titulo, pessoas: m.ministrantes ?? [] })),
+      );
     }
   }
 
@@ -497,7 +512,11 @@ export async function lerBackup(file: File): Promise<Partial<BackupData>> {
     throw new Error("O arquivo não é um backup válido (JSON corrompido ou de outro tipo).");
   }
   const d = dados as Partial<BackupData> | null;
-  if (!d || typeof d !== "object" || (!Array.isArray(d.palestras) && !Array.isArray(d.apoiadores))) {
+  if (
+    !d ||
+    typeof d !== "object" ||
+    (!Array.isArray(d.palestras) && !Array.isArray(d.apoiadores))
+  ) {
     throw new Error("Este arquivo não parece ser um backup da SETEC.");
   }
   return d;
@@ -585,7 +604,10 @@ const TODOS = "00000000-0000-0000-0000-000000000000";
 
 /** Apaga todas as linhas de uma tabela, ignorando tabela inexistente (SQL não rodado). */
 async function apagarTudo(tabela: string) {
-  const { error } = await supabase.from(tabela as any).delete().neq("id", TODOS);
+  const { error } = await supabase
+    .from(tabela as any)
+    .delete()
+    .neq("id", TODOS);
   if (error && error.code !== "PGRST205" && error.code !== "42P01") {
     throw new Error(`${tabela}: ${error.message}`);
   }
@@ -645,6 +667,9 @@ export async function restaurarPonto(ponto: PontoRestauracao) {
 
 /** Registra no histórico uma ação do painel; falhas não atrapalham a ação em si. */
 export async function registrarAtividade(acao: string, descricao: string) {
-  const { error } = await supabase.rpc("registrar_atividade" as any, { _acao: acao, _descricao: descricao } as any);
+  const { error } = await supabase.rpc(
+    "registrar_atividade" as any,
+    { _acao: acao, _descricao: descricao } as any,
+  );
   if (error) console.warn("[histórico]", error);
 }

@@ -4,7 +4,13 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { GRUPOS_COMISSAO, semestresDoGrupo, type GrupoComissao, type MembroComissao, mensagemErro } from "@/lib/setec";
+import {
+  GRUPOS_COMISSAO,
+  semestresDoGrupo,
+  type GrupoComissao,
+  type MembroComissao,
+  mensagemErro,
+} from "@/lib/setec";
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
@@ -40,7 +46,7 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
       return;
     }
 
-        const emailLimpo = email.trim();
+    const emailLimpo = email.trim();
     if (emailLimpo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) {
       toast.error("E-mail inválido");
       return;
@@ -61,7 +67,10 @@ export function ComissaoModal({ open, onOpenChange, membro, grupoPadrao, onSaved
         ...(totalSemestres ? { semestre: Number(semestre) } : { semestre: null }),
       };
       const { error } = membro
-        ? await supabase.from("comissao" as any).update(payload as any).eq("id", membro.id)
+        ? await supabase
+            .from("comissao" as any)
+            .update(payload as any)
+            .eq("id", membro.id)
         : await supabase.from("comissao" as any).insert(payload as any);
       if (error) throw error;
 

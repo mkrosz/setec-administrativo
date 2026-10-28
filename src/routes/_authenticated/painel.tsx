@@ -102,7 +102,6 @@ type Profile = {
 const temAcessoTemporario = (c: Profile) =>
   !!c.acesso_total_ate && new Date(c.acesso_total_ate).getTime() > Date.now();
 
-
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
     meta: [
@@ -162,7 +161,11 @@ function Painel() {
   const config = useQuery({
     queryKey: ["event_config"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("event_config").select("*").limit(1).maybeSingle();
+      const { data, error } = await supabase
+        .from("event_config")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data as EventConfig | null;
     },
@@ -256,16 +259,16 @@ function Painel() {
   });
 
   const comissao = useQuery({
-  queryKey: ["comissao"],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("comissao" as any)
-      .select("*")
-      .order("nome", { ascending: true });
-    if (error) throw error;
-    return (data ?? []) as unknown as MembroComissao[];
-  },
-});
+    queryKey: ["comissao"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("comissao" as any)
+        .select("*")
+        .order("nome", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as MembroComissao[];
+    },
+  });
 
   const removerConta = useServerFn(removerAcesso);
 
@@ -291,8 +294,8 @@ function Painel() {
       titulo: "Enviar redefinição de senha",
       descricao: (
         <>
-          <strong className="text-foreground">{email}</strong> recebe um e-mail com o link para criar uma nova senha.
-          A senha atual continua valendo até ela ser trocada.
+          <strong className="text-foreground">{email}</strong> recebe um e-mail com o link para
+          criar uma nova senha. A senha atual continua valendo até ela ser trocada.
         </>
       ),
       confirmar: "Enviar e-mail",
@@ -310,21 +313,27 @@ function Painel() {
   }
 
   async function concederAcessoTotal(c: Profile, horas: number) {
-    const prazo = horas < 24 ? `${horas} hora${horas > 1 ? "s" : ""}` : `${horas / 24} dia${horas > 24 ? "s" : ""}`;
+    const prazo =
+      horas < 24
+        ? `${horas} hora${horas > 1 ? "s" : ""}`
+        : `${horas / 24} dia${horas > 24 ? "s" : ""}`;
     const ok = await confirmar({
       tom: "aviso",
       titulo: "Conceder acesso total temporário",
       descricao: (
         <>
-          Por <strong className="text-foreground">{prazo}</strong>, {c.email} poderá mudar o nível das contas,
-          liberar, desativar e excluir contas, enviar redefinição de senha e editar o painel mesmo congelado. Você
-          pode retirar o acesso antes do prazo.
+          Por <strong className="text-foreground">{prazo}</strong>, {c.email} poderá mudar o nível
+          das contas, liberar, desativar e excluir contas, enviar redefinição de senha e editar o
+          painel mesmo congelado. Você pode retirar o acesso antes do prazo.
         </>
       ),
       confirmar: "Conceder",
     });
     if (!ok) return;
-    const { error } = await supabase.rpc("conceder_acesso_total" as any, { _user_id: c.id, _horas: horas } as any);
+    const { error } = await supabase.rpc(
+      "conceder_acesso_total" as any,
+      { _user_id: c.id, _horas: horas } as any,
+    );
     if (error) {
       toast.error(mensagemErro(error));
       return;
@@ -349,8 +358,8 @@ function Painel() {
       titulo: "Excluir conta de acesso",
       descricao: (
         <>
-          A conta <strong className="text-foreground">{email}</strong> perde o acesso ao painel e é excluída
-          definitivamente.
+          A conta <strong className="text-foreground">{email}</strong> perde o acesso ao painel e é
+          excluída definitivamente.
         </>
       ),
       confirmar: "Excluir conta",
@@ -366,7 +375,6 @@ function Painel() {
   }
 
   async function updateConfig(patch: Partial<EventConfig>) {
-
     if (!config.data) return;
     const { error } = await supabase.from("event_config").update(patch).eq("id", config.data.id);
     if (error) {
@@ -394,8 +402,8 @@ function Painel() {
       titulo: "Remover palestra",
       descricao: (
         <>
-          <strong className="text-foreground">{p?.titulo || "Esta palestra"}</strong> será apagada junto com a lista de
-          presença e os QR Codes dela. Esta ação não pode ser desfeita.
+          <strong className="text-foreground">{p?.titulo || "Esta palestra"}</strong> será apagada
+          junto com a lista de presença e os QR Codes dela. Esta ação não pode ser desfeita.
         </>
       ),
       confirmar: "Remover",
@@ -417,8 +425,8 @@ function Painel() {
       titulo: "Remover apoiador",
       descricao: (
         <>
-          <strong className="text-foreground">{a?.nome_empresa || "Este apoiador"}</strong> sai da lista de apoiadores e
-          da faixa de parceiros do site.
+          <strong className="text-foreground">{a?.nome_empresa || "Este apoiador"}</strong> sai da
+          lista de apoiadores e da faixa de parceiros do site.
         </>
       ),
       confirmar: "Remover",
@@ -440,14 +448,17 @@ function Painel() {
       titulo: "Remover membro",
       descricao: (
         <>
-          <strong className="text-foreground">{m?.nome || "Este membro"}</strong> sai da comissão organizadora e da página
-          Comissão do site.
+          <strong className="text-foreground">{m?.nome || "Este membro"}</strong> sai da comissão
+          organizadora e da página Comissão do site.
         </>
       ),
       confirmar: "Remover",
     });
     if (!ok) return;
-    const { error } = await supabase.from("comissao" as any).delete().eq("id", id);
+    const { error } = await supabase
+      .from("comissao" as any)
+      .delete()
+      .eq("id", id);
     if (error) {
       toast.error(mensagemErro(error));
       return;
@@ -473,8 +484,12 @@ function Painel() {
 
   // Agrupa por data (sem data numa aba no fim, rascunhos em "Rascunhos")
   const diasPalestras = useMemo(() => agruparPorDia(palestras.data ?? []), [palestras.data]);
-  const diasMinicursos = useMemo(() => agruparPorDia(minicursosQuery.data ?? []), [minicursosQuery.data]);
-  const diaMinicursoSelecionado = diasMinicursos.find((d) => d.key === diaMinicurso) ?? diasMinicursos[0];
+  const diasMinicursos = useMemo(
+    () => agruparPorDia(minicursosQuery.data ?? []),
+    [minicursosQuery.data],
+  );
+  const diaMinicursoSelecionado =
+    diasMinicursos.find((d) => d.key === diaMinicurso) ?? diasMinicursos[0];
 
   // Se a aba ativa não existir mais (ou ainda não foi escolhida), usa a primeira
   const diaSelecionado = diasPalestras.find((d) => d.key === diaAtivo) ?? diasPalestras[0];
@@ -564,8 +579,9 @@ function Painel() {
             {r.evento ? ", e as informações do evento" : ""}.
           </span>
           <span className="mt-2 block">
-            Registros com o mesmo código são <strong className="text-foreground">substituídos</strong> pelos do
-            arquivo; os demais continuam como estão.
+            Registros com o mesmo código são{" "}
+            <strong className="text-foreground">substituídos</strong> pelos do arquivo; os demais
+            continuam como estão.
           </span>
         </>
       ),
@@ -584,813 +600,881 @@ function Painel() {
   return (
     <>
       <CongeladoContext.Provider value={bloqueadoPorCongelamento}>
-      <main className="relative min-h-screen overflow-hidden bg-background px-4 pb-24 pt-8 sm:px-6 md:px-16">
-        <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
-          <SetecLogo />
-          {/* Ações do painel: no celular e no tablet ficam numa linha própria abaixo do logo */}
-          <div className="order-last flex w-full flex-wrap items-center gap-2 sm:gap-3 xl:order-none xl:ml-auto xl:w-auto">
-            {isAdmin && (
-            <Travado>
-            <button
-              onClick={() => setResetOpen(true)}
-              aria-label="Resetar dados do ano"
-              title="Resetar dados do ano"
-              className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-destructive/60 text-sm text-destructive transition-colors hover:bg-destructive/10 sm:w-auto sm:px-5"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span className="hidden sm:inline">Resetar dados do ano</span>
-            </button>
-            </Travado>
-            )}
-            <div className="contents sm:flex sm:items-center sm:gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    disabled={ocupado}
-                    aria-label="Exportar dados"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
-                  >
-                    <Download className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-42.5">
-                  <DropdownMenuItem onClick={() => comEspera(async () => {
-                        await exportarPDF();
-                        await registrarAtividade("exportou", "PDF");
-                      }, "PDF gerado")}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Apenas PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => comEspera(async () => {
-                        await exportarJSON();
-                        await registrarAtividade("exportou", "JSON");
-                      }, "JSON exportado")}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Apenas JSON
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      comEspera(async () => {
-                        await exportarPDF();
-                        await exportarJSON();
-                        await registrarAtividade("exportou", "PDF e JSON");
-                      }, "Exportação concluída")
-                    }
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    PDF + JSON
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+        <main className="relative min-h-screen overflow-hidden bg-background px-4 pb-24 pt-8 sm:px-6 md:px-16">
+          <header className="relative mx-auto flex max-w-290 flex-wrap items-center justify-between gap-4">
+            <SetecLogo />
+            {/* Ações do painel: no celular e no tablet ficam numa linha própria abaixo do logo */}
+            <div className="order-last flex w-full flex-wrap items-center gap-2 sm:gap-3 xl:order-none xl:ml-auto xl:w-auto">
               {isAdmin && (
-              <Travado>
-              <button
-                onClick={() => importRef.current?.click()}
-                disabled={ocupado}
-                aria-label="Importar dados"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
-              >
-                <Upload className="h-4 w-4" />
-              </button>
-              <input
-                ref={importRef}
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={(e) => {
-                  onImportar(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-              </Travado>
+                <Travado>
+                  <button
+                    onClick={() => setResetOpen(true)}
+                    aria-label="Resetar dados do ano"
+                    title="Resetar dados do ano"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-destructive/60 text-sm text-destructive transition-colors hover:bg-destructive/10 sm:w-auto sm:px-5"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span className="hidden sm:inline">Resetar dados do ano</span>
+                  </button>
+                </Travado>
               )}
-              {isAdmin ? (
-              <Travado>
-              <button
-                onClick={() => updateConfig({ evento_ativo: !eventoAtivo })}
-                className={`flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 text-sm transition-colors sm:flex-none sm:px-5 ${
-                  eventoAtivo
-                    ? "bg-primary/20 text-primary-glow hover:bg-primary/30"
-                    : "border border-border/70 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                <span className="sm:hidden">{eventoAtivo ? "Ativo" : "Oculto"}</span>
-                <span className="hidden sm:inline">{eventoAtivo ? "Evento ativo" : "Evento oculto"}</span>
-              </button>
-              </Travado>
-              ) : (
-                <span
-                  title="Apenas administradores podem ativar ou desativar o evento"
-                  className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground sm:flex-none sm:px-5"
-                >
-                  {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  <span className="sm:hidden">{eventoAtivo ? "Ativo" : "Oculto"}</span>
-                <span className="hidden sm:inline">{eventoAtivo ? "Evento ativo" : "Evento oculto"}</span>
-                </span>
-              )}
-            </div>
-            {isAdmin && (
-            <Link
-              to="/presenca"
-              aria-label="Presença"
-              title="Presença"
-              className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none sm:px-5"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              <span className="hidden min-[400px]:inline">Presença</span>
-            </Link>
-            )}
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isMaster && (
-            <Link
-              to="/master"
-              aria-label="Área da Master"
-              title="Área da Master"
-              className="flex h-9 w-9 items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 text-sm text-primary-glow transition-colors hover:bg-primary/20 sm:h-10 sm:w-auto sm:px-5"
-            >
-              <Crown className="h-4 w-4" />
-              <span className="hidden sm:inline">Master</span>
-            </Link>
-            )}
-            <span className="hidden h-7 w-px bg-border xl:block" />
-            <button
-              onClick={toggle}
-              aria-label="Alternar tema"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {isLight ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </button>
-            <Link
-              to="/perfil"
-              aria-label="Meu perfil"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <UserRound className="h-4 w-4" />
-            </Link>
-            <button
-              onClick={sair}
-              aria-label="Sair do painel"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/25 text-primary-glow transition-colors hover:bg-primary/40"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </header>
-
-        {congelado && (
-          <div
-            role="status"
-            className="relative mx-auto mt-8 flex max-w-290 items-center gap-3 rounded-2xl border border-sky-400/30 bg-sky-400/10 px-5 py-3.5 text-sm text-sky-200 [.light_&]:text-sky-800"
-          >
-            <Snowflake className="h-4 w-4 shrink-0" />
-            {bloqueadoPorCongelamento
-              ? "O painel está congelado pela conta master: no momento só é possível visualizar."
-              : "O painel está congelado: só você (e quem tem acesso total) pode editar agora."}
-          </div>
-        )}
-
-        <div className="relative mx-auto mt-14 max-w-290">
-          <h1 className="title-gradient font-display text-[clamp(1.5rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] lg:text-[68px]">
-            Painel
-            <br />
-            Administrativo
-          </h1>
-          <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Gerencie as configurações da edição, grade de programação e parceiros do evento em um
-            único lugar.
-          </p>
-
-          {/* Informações do Evento */}
-          <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
-            <Settings className="h-5 w-5 text-primary-glow" />
-            Informações do Evento
-          </h2>
-          <section className="panel-surface mt-5 p-4 sm:p-7">
-            <StatusConsulta consulta={config} nome="as informações do evento" />
-            <span className="text-xs text-muted-foreground">Logo do Evento</span>
-            <Travado>
-            <div className="mt-3 flex flex-col gap-5 lg:flex-row">
-              <button
-                onClick={() => logoRef.current?.click()}
-                className="flex h-42.5 w-full max-w-65 items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-field/40 text-muted-foreground transition-colors hover:border-primary/60"
-              >
-                <StorageImage
-                  path={config.data?.logo_url ?? null}
-                  alt="Logo do evento"
-                  className="max-h-30 max-w-50"
-                  fallback={
-                    <span className="flex items-center gap-3">
-                      <SetecMark className="h-10 w-14 opacity-70" />
-                      <span className="text-left font-display leading-tight">
-                        <span className="block text-[9px] tracking-[0.22em]">SEMANA DE</span>
-                        <span className="block text-base font-extrabold">TECNOLOGIA</span>
-                        <span className="block text-[9px] tracking-[0.2em]">
-                          {config.data?.edicao}
-                        </span>
+              <div className="contents sm:flex sm:items-center sm:gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      disabled={ocupado}
+                      aria-label="Exportar dados"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-42.5">
+                    <DropdownMenuItem
+                      onClick={() =>
+                        comEspera(async () => {
+                          await exportarPDF();
+                          await registrarAtividade("exportou", "PDF");
+                        }, "PDF gerado")
+                      }
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Apenas PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        comEspera(async () => {
+                          await exportarJSON();
+                          await registrarAtividade("exportou", "JSON");
+                        }, "JSON exportado")
+                      }
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Apenas JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        comEspera(async () => {
+                          await exportarPDF();
+                          await exportarJSON();
+                          await registrarAtividade("exportou", "PDF e JSON");
+                        }, "Exportação concluída")
+                      }
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      PDF + JSON
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {isAdmin && (
+                  <Travado>
+                    <button
+                      onClick={() => importRef.current?.click()}
+                      disabled={ocupado}
+                      aria-label="Importar dados"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </button>
+                    <input
+                      ref={importRef}
+                      type="file"
+                      accept="application/json"
+                      className="hidden"
+                      onChange={(e) => {
+                        onImportar(e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                  </Travado>
+                )}
+                {isAdmin ? (
+                  <Travado>
+                    <button
+                      onClick={() => updateConfig({ evento_ativo: !eventoAtivo })}
+                      className={`flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 text-sm transition-colors sm:flex-none sm:px-5 ${
+                        eventoAtivo
+                          ? "bg-primary/20 text-primary-glow hover:bg-primary/30"
+                          : "border border-border/70 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      <span className="sm:hidden">{eventoAtivo ? "Ativo" : "Oculto"}</span>
+                      <span className="hidden sm:inline">
+                        {eventoAtivo ? "Evento ativo" : "Evento oculto"}
                       </span>
-                    </span>
-                  }
-                />
-              </button>
-              <input
-                ref={logoRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => onLogoChange(e.target.files?.[0])}
-              />
-
-              <div className="grid flex-1 gap-4 sm:grid-cols-3">
-                <ConfigField
-                  label="Edição"
-                  value={config.data?.edicao ?? ""}
-                  onCommit={(v) => updateConfig({ edicao: v })}
-                />
-                <div className="sm:col-span-2">
-                  <DataEventoField
-                    datas={config.data?.datas ?? ""}
-                    ano={config.data?.ano ?? ""}
-                    onChange={(datas, ano) => updateConfig({ datas, ano })}
-                  />
-                </div>
-                <ConfigField
-                  className="sm:col-span-2"
-                  icon
-                  label="Sympla URL (Ingressos)"
-                  value={config.data?.sympla_url ?? ""}
-                  onCommit={(v) => updateConfig({ sympla_url: v })}
-                />
-                <ConfigField
-                  icon
-                  label="Instagram URL"
-                  value={config.data?.instagram_url ?? ""}
-                  onCommit={(v) => updateConfig({ instagram_url: v })}
-                />
-              </div>
-            </div>
-            </Travado>
-          </section>
-
-          {/* Programação: palestras e minicursos */}
-          <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
-            <Mic className="h-5 w-5 text-primary-glow" />
-            Gerenciar Programação
-          </h2>
-          <section className="panel-surface mt-5 p-4 sm:p-7">
-            {/* Linha de abas: dias (palestras) à esquerda, palestras/minicursos à direita */}
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b border-border/40 pb-4">
-              <div className="flex flex-wrap gap-8">
-                {abaProgramacao === "palestras" ? (
-                  diasPalestras.map((d) => (
-                    <button
-                      key={d.key}
-                      onClick={() => {
-                        setDiaAtivo(d.key);
-                        setPgPalestras(1);
-                      }}
-                      className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
-                        diaSelecionado?.key === d.key
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground/80"
-                      }`}
-                    >
-                      {d.label}
-                      <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
                     </button>
-                  ))
+                  </Travado>
                 ) : (
-                  diasMinicursos.map((d) => (
-                    <button
-                      key={d.key}
-                      onClick={() => {
-                        setDiaMinicurso(d.key);
-                        setPgMinicursos(1);
-                      }}
-                      className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
-                        diaMinicursoSelecionado?.key === d.key
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground/80"
-                      }`}
-                    >
-                      {d.label}
-                      <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
-                    </button>
-                  ))
+                  <span
+                    title="Apenas administradores podem ativar ou desativar o evento"
+                    className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground sm:flex-none sm:px-5"
+                  >
+                    {eventoAtivo ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    <span className="sm:hidden">{eventoAtivo ? "Ativo" : "Oculto"}</span>
+                    <span className="hidden sm:inline">
+                      {eventoAtivo ? "Evento ativo" : "Evento oculto"}
+                    </span>
+                  </span>
                 )}
               </div>
-              {/* Seletor em pílula: fundo de campo, aba ativa com roxo translúcido */}
-              <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-field/60 p-1" role="tablist">
-                {(
-                  [
-                    { valor: "palestras", rotulo: "Palestras", total: (palestras.data ?? []).length },
-                    { valor: "minicursos", rotulo: "Minicursos", total: (minicursosQuery.data ?? []).length },
-                  ] as const
-                ).map((aba) => {
-                  const ativa = abaProgramacao === aba.valor;
-                  return (
-                    <button
-                      key={aba.valor}
-                      role="tab"
-                      aria-selected={ativa}
-                      onClick={() => setAbaProgramacao(aba.valor)}
-                      className={`flex h-8 items-center gap-2 rounded-full px-4 text-xs font-medium transition-all ${
-                        ativa
-                          ? "bg-primary/20 text-foreground ring-1 ring-primary/30"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                          ativa ? "bg-primary-glow" : "bg-muted-foreground/40"
-                        }`}
-                      />
-                      {aba.rotulo}
-                      <span className={`tabular-nums ${ativa ? "text-primary-glow" : "opacity-60"}`}>{aba.total}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {abaProgramacao === "minicursos" ? (
-              <MinicursosSection
-                lista={diaMinicursoSelecionado?.items ?? []}
-                pagina={pgMinicursos}
-                porPagina={PAGE}
-                onPagina={setPgMinicursos}
-              />
-            ) : (
-            <>
-            <StatusConsulta consulta={palestras} nome="as palestras" />
-            <ul className="divide-y divide-border/40">
-              {palestrasPagina.map((p) => (
-                <li key={p.id} className="group flex items-center gap-4 py-4">
-                  <AvataresPessoas pessoas={palestrantesDe(p)} />
-                                    <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 truncate text-base text-foreground">
-                      <span className="truncate">{p.titulo || "(Sem título)"}</span>
-                      {p.rascunho && (
-                        <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
-                          Rascunho
-                        </span>
-                      )}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {nomesPalestrantes(p) || "Palestrante não informado"}
-                    </p>
-                  </div>
-                  <div className="hidden text-right sm:block">
-                    <p className="text-sm font-semibold text-foreground">
-                      {p.data ? formatDia(p.data) : "Sem data"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {p.hora_inicio && p.hora_fim
-                        ? `${formatHora(p.hora_inicio)} - ${formatHora(p.hora_fim)}`
-                        : "Sem horário"}
-                    </p>
-                  </div>
-                  <Travado>
-                  <div className="flex items-center gap-1 acoes-hover">
-                    <button
-                      aria-label="Editar palestra"
-                      onClick={() => {
-                        setPalestraEdit(p);
-                        setPalestraOpen(true);
-                      }}
-                      className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      aria-label="Remover palestra"
-                      onClick={() => removerPalestra(p.id)}
-                      className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  </Travado>
-                </li>
-              ))}
-            </ul>
-            {palestras.isSuccess && diasPalestras.length === 0 && (
-              <p className="py-4 text-sm text-muted-foreground">Nenhuma palestra cadastrada.</p>
-            )}
-            {totalPgPalestras > 1 && (
-            <Paginacao
-              pagina={pgPalestrasAtual}
-              totalPaginas={totalPgPalestras}
-              onChange={setPgPalestras}
-            />
-          )}
-          
-            <Travado>
-            <button
-              onClick={() => {
-                setPalestraEdit(null);
-                setPalestraOpen(true);
-              }}
-              className="mt-5 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-            >
-              <CirclePlus className="h-5 w-5" />
-              Adicionar palestra
-            </button>
-            </Travado>
-            </>
-            )}
-          </section>
-
-          {/* Apoiadores */}
-          <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
-            <Handshake className="h-5 w-5 text-primary-glow" />
-            Apoiadores
-          </h2>
-          <section className="panel-surface mt-5 p-4 sm:p-7">
-            <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
-              {NIVEIS.map((n) => (
-                <button
-                  key={n}
-                  onClick={() => {
-                    setNivelAtivo(n);
-                    setPgApoiadores(1);
-                  }}
-                  className={`text-[11px] tracking-[0.18em] transition-colors ${
-                    nivelAtivo === n
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground/80"
-                  }`}
+              {isAdmin && (
+                <Link
+                  to="/presenca"
+                  aria-label="Presença"
+                  title="Presença"
+                  className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none sm:px-5"
                 >
-                  {n}
-                </button>
-              ))}
-            </div>
-
-            <StatusConsulta consulta={patrocinadores} nome="os apoiadores" />
-            <div ref={apoiadoresRef} className="mt-6 flex flex-wrap gap-4">
-              {apoiadoresPagina.map((s) => (
-                <div
-                  key={s.id}
-                  className={`group relative h-23.75 overflow-hidden rounded-lg border border-border/60 bg-field ${
-                    empilharApoiadores ? "w-full" : "w-48.75"
-                  }`}
-                >
-                  <StorageImage
-                    path={s.logo_url}
-                    alt={s.nome_empresa}
-                    className="h-full w-full object-contain p-3"
-                    fallback={
-                      <span className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-muted-foreground">
-                        {s.nome_empresa}
-                      </span>
-                    }
-                  />
-                  <Travado>
-                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/80 to-transparent p-1.5 acoes-hover">
-                    <button
-                      aria-label="Editar apoiador"
-                      onClick={() => {
-                        setSponsorEdit(s);
-                        setSponsorOpen(true);
-                      }}
-                      className="rounded-full p-1.5 text-white/80 hover:text-white"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      aria-label="Remover apoiador"
-                      onClick={() => removerPatrocinador(s.id)}
-                      className="rounded-full p-1.5 text-white/80 hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  </Travado>
-                </div>
-              ))}
-              {patrocinadores.isSuccess && doNivel.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum apoiador cadastrado neste nível.
-                </p>
+                  <ClipboardCheck className="h-4 w-4" />
+                  <span className="hidden min-[400px]:inline">Presença</span>
+                </Link>
               )}
             </div>
-            <Paginacao pagina={pgApoiadoresAtual} totalPaginas={totalPgApoiadores} onChange={setPgApoiadores} />
-
-            <Travado>
-            <button
-              onClick={() => {
-                setSponsorEdit(null);
-                setSponsorOpen(true);
-              }}
-              className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-            >
-              <CirclePlus className="h-5 w-5" />
-              Adicionar apoiador
-            </button>
-            </Travado>
-          </section>
-
-         {/* Comissão */}
-          <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
-            <Users className="h-5 w-5 text-primary-glow" />
-            Comissão
-          </h2>
-          <section className="panel-surface mt-5 p-4 sm:p-7">
-            <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
-              {GRUPOS_COMISSAO.map((g) => {
-                const total = (comissao.data ?? []).filter((m) => m.grupo === g.value).length;
-                return (
-                  <button
-                    key={g.value}
-                    onClick={() => {
-                      setGrupoAtivo(g.value);
-                      setPgComissao(1);
-                    }}
-                    className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
-                      grupoAtivo === g.value
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground/80"
-                    }`}
-                  >
-                    {g.label}
-                    <span className="ml-2 text-[10px] opacity-60">({total})</span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {isMaster && (
+                <Link
+                  to="/master"
+                  aria-label="Área da Master"
+                  title="Área da Master"
+                  className="flex h-9 w-9 items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 text-sm text-primary-glow transition-colors hover:bg-primary/20 sm:h-10 sm:w-auto sm:px-5"
+                >
+                  <Crown className="h-4 w-4" />
+                  <span className="hidden sm:inline">Master</span>
+                </Link>
+              )}
+              <span className="hidden h-7 w-px bg-border xl:block" />
+              <button
+                onClick={toggle}
+                aria-label="Alternar tema"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {isLight ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              </button>
+              <Link
+                to="/perfil"
+                aria-label="Meu perfil"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <UserRound className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={sair}
+                aria-label="Sair do painel"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/25 text-primary-glow transition-colors hover:bg-primary/40"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
+          </header>
 
-            <StatusConsulta consulta={comissao} nome="a comissão" />
-            {membrosDoGrupo.length === 0 ? (
-              comissao.isSuccess ? (
-                <p className="mt-6 text-sm text-muted-foreground">Nenhum membro cadastrado neste grupo.</p>
-              ) : null
-            ) : (
-              <div className="mt-6 space-y-6">
-                {(semestresDoGrupo(grupoAtivo)
-                  ? porSemestre(membrosDoGrupo)
-                  : [{ semestre: 0, membros: membrosDoGrupo }]
-                ).map((bloco) => (
-                  <div key={bloco.semestre}>
-                    {bloco.semestre > 0 && (
-                      <p className="mb-3 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                        <span className="text-foreground">{bloco.semestre}º semestre</span>
-                        <span className="opacity-60">({bloco.membros.length})</span>
-                        <span className="h-px flex-1 bg-border/40" />
-                      </p>
-                    )}
-                    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      {bloco.membros.map((m) => (
-                        <li
-                          key={m.id}
-                          className="group flex min-w-0 items-center gap-3 rounded-2xl border border-border/60 bg-field/40 px-4 py-3 transition-colors hover:border-primary/40"
-                        >
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary-glow">
-                            {initials(m.nome)}
+          {congelado && (
+            <div
+              role="status"
+              className="relative mx-auto mt-8 flex max-w-290 items-center gap-3 rounded-2xl border border-sky-400/30 bg-sky-400/10 px-5 py-3.5 text-sm text-sky-200 [.light_&]:text-sky-800"
+            >
+              <Snowflake className="h-4 w-4 shrink-0" />
+              {bloqueadoPorCongelamento
+                ? "O painel está congelado pela conta master: no momento só é possível visualizar."
+                : "O painel está congelado: só você (e quem tem acesso total) pode editar agora."}
+            </div>
+          )}
+
+          <div className="relative mx-auto mt-14 max-w-290">
+            <h1 className="title-gradient font-display text-[clamp(1.5rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.01em] lg:text-[68px]">
+              Painel
+              <br />
+              Administrativo
+            </h1>
+            <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Gerencie as configurações da edição, grade de programação e parceiros do evento em um
+              único lugar.
+            </p>
+
+            {/* Informações do Evento */}
+            <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
+              <Settings className="h-5 w-5 text-primary-glow" />
+              Informações do Evento
+            </h2>
+            <section className="panel-surface mt-5 p-4 sm:p-7">
+              <StatusConsulta consulta={config} nome="as informações do evento" />
+              <span className="text-xs text-muted-foreground">Logo do Evento</span>
+              <Travado>
+                <div className="mt-3 flex flex-col gap-5 lg:flex-row">
+                  <button
+                    onClick={() => logoRef.current?.click()}
+                    className="flex h-42.5 w-full max-w-65 items-center justify-center rounded-[28px] border border-dashed border-border/70 bg-field/40 text-muted-foreground transition-colors hover:border-primary/60"
+                  >
+                    <StorageImage
+                      path={config.data?.logo_url ?? null}
+                      alt="Logo do evento"
+                      className="max-h-30 max-w-50"
+                      fallback={
+                        <span className="flex items-center gap-3">
+                          <SetecMark className="h-10 w-14 opacity-70" />
+                          <span className="text-left font-display leading-tight">
+                            <span className="block text-[9px] tracking-[0.22em]">SEMANA DE</span>
+                            <span className="block text-base font-extrabold">TECNOLOGIA</span>
+                            <span className="block text-[9px] tracking-[0.2em]">
+                              {config.data?.edicao}
+                            </span>
                           </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground" title={m.nome}>
-                              {m.nome}
-                            </p>
-                            <p
-                              className="truncate text-xs text-muted-foreground"
-                              title={m.email ?? undefined}
-                            >
-                              {m.email || "Sem e-mail"}
-                            </p>
-                          </div>
-                          <Travado>
-                          <div className="flex shrink-0 items-center gap-0.5 acoes-hover">
+                        </span>
+                      }
+                    />
+                  </button>
+                  <input
+                    ref={logoRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => onLogoChange(e.target.files?.[0])}
+                  />
+
+                  <div className="grid flex-1 gap-4 sm:grid-cols-3">
+                    <ConfigField
+                      label="Edição"
+                      value={config.data?.edicao ?? ""}
+                      onCommit={(v) => updateConfig({ edicao: v })}
+                    />
+                    <div className="sm:col-span-2">
+                      <DataEventoField
+                        datas={config.data?.datas ?? ""}
+                        ano={config.data?.ano ?? ""}
+                        onChange={(datas, ano) => updateConfig({ datas, ano })}
+                      />
+                    </div>
+                    <ConfigField
+                      className="sm:col-span-2"
+                      icon
+                      label="Sympla URL (Ingressos)"
+                      value={config.data?.sympla_url ?? ""}
+                      onCommit={(v) => updateConfig({ sympla_url: v })}
+                    />
+                    <ConfigField
+                      icon
+                      label="Instagram URL"
+                      value={config.data?.instagram_url ?? ""}
+                      onCommit={(v) => updateConfig({ instagram_url: v })}
+                    />
+                  </div>
+                </div>
+              </Travado>
+            </section>
+
+            {/* Programação: palestras e minicursos */}
+            <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
+              <Mic className="h-5 w-5 text-primary-glow" />
+              Gerenciar Programação
+            </h2>
+            <section className="panel-surface mt-5 p-4 sm:p-7">
+              {/* Linha de abas: dias (palestras) à esquerda, palestras/minicursos à direita */}
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b border-border/40 pb-4">
+                <div className="flex flex-wrap gap-8">
+                  {abaProgramacao === "palestras"
+                    ? diasPalestras.map((d) => (
+                        <button
+                          key={d.key}
+                          onClick={() => {
+                            setDiaAtivo(d.key);
+                            setPgPalestras(1);
+                          }}
+                          className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                            diaSelecionado?.key === d.key
+                              ? "text-foreground"
+                              : "text-muted-foreground hover:text-foreground/80"
+                          }`}
+                        >
+                          {d.label}
+                          <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
+                        </button>
+                      ))
+                    : diasMinicursos.map((d) => (
+                        <button
+                          key={d.key}
+                          onClick={() => {
+                            setDiaMinicurso(d.key);
+                            setPgMinicursos(1);
+                          }}
+                          className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                            diaMinicursoSelecionado?.key === d.key
+                              ? "text-foreground"
+                              : "text-muted-foreground hover:text-foreground/80"
+                          }`}
+                        >
+                          {d.label}
+                          <span className="ml-2 text-[10px] opacity-60">({d.items.length})</span>
+                        </button>
+                      ))}
+                </div>
+                {/* Seletor em pílula: fundo de campo, aba ativa com roxo translúcido */}
+                <div
+                  className="flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-field/60 p-1"
+                  role="tablist"
+                >
+                  {(
+                    [
+                      {
+                        valor: "palestras",
+                        rotulo: "Palestras",
+                        total: (palestras.data ?? []).length,
+                      },
+                      {
+                        valor: "minicursos",
+                        rotulo: "Minicursos",
+                        total: (minicursosQuery.data ?? []).length,
+                      },
+                    ] as const
+                  ).map((aba) => {
+                    const ativa = abaProgramacao === aba.valor;
+                    return (
+                      <button
+                        key={aba.valor}
+                        role="tab"
+                        aria-selected={ativa}
+                        onClick={() => setAbaProgramacao(aba.valor)}
+                        className={`flex h-8 items-center gap-2 rounded-full px-4 text-xs font-medium transition-all ${
+                          ativa
+                            ? "bg-primary/20 text-foreground ring-1 ring-primary/30"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                            ativa ? "bg-primary-glow" : "bg-muted-foreground/40"
+                          }`}
+                        />
+                        {aba.rotulo}
+                        <span
+                          className={`tabular-nums ${ativa ? "text-primary-glow" : "opacity-60"}`}
+                        >
+                          {aba.total}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {abaProgramacao === "minicursos" ? (
+                <MinicursosSection
+                  lista={diaMinicursoSelecionado?.items ?? []}
+                  pagina={pgMinicursos}
+                  porPagina={PAGE}
+                  onPagina={setPgMinicursos}
+                />
+              ) : (
+                <>
+                  <StatusConsulta consulta={palestras} nome="as palestras" />
+                  <ul className="divide-y divide-border/40">
+                    {palestrasPagina.map((p) => (
+                      <li key={p.id} className="group flex items-center gap-4 py-4">
+                        <AvataresPessoas pessoas={palestrantesDe(p)} />
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 truncate text-base text-foreground">
+                            <span className="truncate">{p.titulo || "(Sem título)"}</span>
+                            {p.rascunho && (
+                              <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                                Rascunho
+                              </span>
+                            )}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {nomesPalestrantes(p) || "Palestrante não informado"}
+                          </p>
+                        </div>
+                        <div className="hidden text-right sm:block">
+                          <p className="text-sm font-semibold text-foreground">
+                            {p.data ? formatDia(p.data) : "Sem data"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.hora_inicio && p.hora_fim
+                              ? `${formatHora(p.hora_inicio)} - ${formatHora(p.hora_fim)}`
+                              : "Sem horário"}
+                          </p>
+                        </div>
+                        <Travado>
+                          <div className="flex items-center gap-1 acoes-hover">
                             <button
-                              aria-label="Editar membro"
+                              aria-label="Editar palestra"
                               onClick={() => {
-                                setComissaoEdit(m);
-                                setComissaoOpen(true);
+                                setPalestraEdit(p);
+                                setPalestraOpen(true);
                               }}
                               className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
-                              aria-label="Remover membro"
-                              onClick={() => removerMembro(m.id)}
+                              aria-label="Remover palestra"
+                              onClick={() => removerPalestra(p.id)}
                               className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                          </Travado>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                        </Travado>
+                      </li>
+                    ))}
+                  </ul>
+                  {palestras.isSuccess && diasPalestras.length === 0 && (
+                    <p className="py-4 text-sm text-muted-foreground">
+                      Nenhuma palestra cadastrada.
+                    </p>
+                  )}
+                  {totalPgPalestras > 1 && (
+                    <Paginacao
+                      pagina={pgPalestrasAtual}
+                      totalPaginas={totalPgPalestras}
+                      onChange={setPgPalestras}
+                    />
+                  )}
+
+                  <Travado>
+                    <button
+                      onClick={() => {
+                        setPalestraEdit(null);
+                        setPalestraOpen(true);
+                      }}
+                      className="mt-5 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                    >
+                      <CirclePlus className="h-5 w-5" />
+                      Adicionar palestra
+                    </button>
+                  </Travado>
+                </>
+              )}
+            </section>
+
+            {/* Apoiadores */}
+            <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
+              <Handshake className="h-5 w-5 text-primary-glow" />
+              Apoiadores
+            </h2>
+            <section className="panel-surface mt-5 p-4 sm:p-7">
+              <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
+                {NIVEIS.map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => {
+                      setNivelAtivo(n);
+                      setPgApoiadores(1);
+                    }}
+                    className={`text-[11px] tracking-[0.18em] transition-colors ${
+                      nivelAtivo === n
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground/80"
+                    }`}
+                  >
+                    {n}
+                  </button>
                 ))}
               </div>
-            )}
-            <Paginacao pagina={pgComissaoAtual} totalPaginas={totalPgComissao} onChange={setPgComissao} />
 
-            <Travado>
-            <button
-              onClick={() => {
-                setComissaoEdit(null);
-                setComissaoOpen(true);
-              }}
-              className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-            >
-              <CirclePlus className="h-5 w-5" />
-              Adicionar membro
-            </button>
-            </Travado>
-          </section>
-
-          {/* Controle de Acessos — administradores, master e quem tem acesso total temporário */}
-          {veAcessos && (
-            <>
-              <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
-                <ShieldCheck className="h-5 w-5 text-primary-glow" />
-                Controle de Acessos
-              </h2>
-              <section className="panel-surface mt-5 p-4 sm:p-7">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {acessoTotal
-                    ? "Libere ou bloqueie o acesso ao painel e defina o nível de cada conta. Usuários comuns gerenciam o evento, mas não acessam o Controle de Acessos nem a lista de presença."
-                    : "Libere as contas que pediram acesso: elas entram como usuário comum. Mudar o nível, desativar e excluir contas é feito pela conta master."}
-                </p>
-                <StatusConsulta consulta={acessos} nome="os acessos" />
-                <ul className="mt-5 divide-y divide-border/40">
-                  {acessosPagina.map((c) => {
-                    const ehVoce = c.id === meuPerfil.data?.id;
-                    const editavel = !ehVoce && !c.master;
-                    // master / acesso total: tudo; administrador: só liberar contas novas de usuário comum
-                    const podeAtivar = editavel && (acessoTotal || (isAdmin && !c.ativo && c.role === "user"));
-                    const podeGerenciar = editavel && acessoTotal;
-                    const temporario = temAcessoTemporario(c);
-                    const ultimo = ultimosAcessos.data?.get(c.id);
-                    return (
-                    <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 py-4">
-                      <div className="min-w-0 flex-1 basis-56">
-                        <p className="truncate text-[15px] text-foreground">{c.email}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {c.ativo ? "Acesso liberado" : "Aguardando liberação"}
-                          {ehVoce && " • você"}
-                          {isMaster && ultimosAcessos.isSuccess && (
-                            <>
-                              {" • "}
-                              {ultimo
-                                ? `último acesso ${new Date(ultimo).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
-                                : "nunca entrou"}
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      {c.master && (
-                        <span
-                          title="Conta master: não pode ser alterada, desativada nem excluída"
-                          className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 text-xs font-medium text-primary-glow"
-                        >
-                          <Lock className="h-3.5 w-3.5" />
-                          Conta master
+              <StatusConsulta consulta={patrocinadores} nome="os apoiadores" />
+              <div ref={apoiadoresRef} className="mt-6 flex flex-wrap gap-4">
+                {apoiadoresPagina.map((s) => (
+                  <div
+                    key={s.id}
+                    className={`group relative h-23.75 overflow-hidden rounded-lg border border-border/60 bg-field ${
+                      empilharApoiadores ? "w-full" : "w-48.75"
+                    }`}
+                  >
+                    <StorageImage
+                      path={s.logo_url}
+                      alt={s.nome_empresa}
+                      className="h-full w-full object-contain p-3"
+                      fallback={
+                        <span className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-muted-foreground">
+                          {s.nome_empresa}
                         </span>
-                      )}
-                      {temporario && (
-                        <span
-                          title="Acesso total temporário concedido pela conta master"
-                          className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 text-xs font-medium text-amber-300 [.light_&]:text-amber-700"
-                        >
-                          <Zap className="h-3.5 w-3.5" />
-                          Acesso total até{" "}
-                          {new Date(c.acesso_total_ate!).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                          {isMaster && (
-                            <button
-                              onClick={() => revogarAcessoTotal(c)}
-                              aria-label={`Retirar acesso total de ${c.email}`}
-                              title="Retirar acesso total"
-                              className="-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-amber-400/20"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          )}
-                        </span>
-                      )}
-                      {/* No celular os controles ocupam uma linha só, abaixo do e-mail */}
-                      <div className="flex w-full items-center gap-2 sm:w-auto">
-                      <Travado>
-                      {isMaster && editavel && c.ativo && !temporario && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              title="Conceder acesso total temporário"
-                              aria-label="Conceder acesso total temporário"
-                              className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-border/70 text-sm text-muted-foreground transition-colors hover:border-amber-400/60 hover:text-foreground sm:w-auto sm:px-4"
-                            >
-                              <Zap className="h-4 w-4" />
-                              <span className="hidden sm:inline">Acesso total</span>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {(
-                              [
-                                [1, "Por 1 hora"],
-                                [24, "Por 24 horas"],
-                                [24 * 7, "Por 7 dias"],
-                              ] as const
-                            ).map(([h, r]) => (
-                              <DropdownMenuItem key={h} onClick={() => concederAcessoTotal(c, h)}>
-                                {r}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                      <div className="relative min-w-0 flex-1 sm:flex-none">
-                        <select
-                          aria-label={`Nível de ${c.email}`}
-                          value={c.role}
-                          disabled={!podeGerenciar}
-                          title={podeGerenciar ? undefined : "Só a conta master pode mudar o nível"}
-                          onChange={(e) => atualizarAcesso(c.id, { role: e.target.value as AppRole })}
-                          className="field-pill h-10 w-full appearance-none py-0 pl-4 pr-10 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                        >
-                          <option value="admin">Administrador</option>
-                          <option value="user">Usuário comum</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      </div>
-                      <button
-                        onClick={() => atualizarAcesso(c.id, { ativo: !c.ativo })}
-                        disabled={!podeAtivar}
-                        title={podeAtivar ? undefined : "Só a conta master pode desativar contas"}
-                        aria-label={c.ativo ? "Desativar" : "Liberar"}
-                        className={`flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm transition-colors sm:px-5 disabled:cursor-not-allowed disabled:opacity-50 ${
-                          c.ativo
-                            ? "border border-border/70 text-muted-foreground hover:text-foreground"
-                            : "bg-primary text-primary-foreground hover:bg-primary-glow"
-                        }`}
-                      >
-                        {c.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                        <span className={c.ativo ? "hidden sm:inline" : undefined}>{c.ativo ? "Desativar" : "Liberar"}</span>
-                      </button>
-                      {acessoTotal && (
+                      }
+                    />
+                    <Travado>
+                      <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/80 to-transparent p-1.5 acoes-hover">
                         <button
-                          aria-label={`Enviar redefinição de senha para ${c.email}`}
-                          title="Enviar redefinição de senha"
-                          onClick={() => enviarRedefinicao(c.email)}
-                          disabled={!podeGerenciar}
-                          className="rounded-full p-2 text-muted-foreground hover:bg-primary/15 hover:text-primary-glow disabled:pointer-events-none disabled:opacity-40"
+                          aria-label="Editar apoiador"
+                          onClick={() => {
+                            setSponsorEdit(s);
+                            setSponsorOpen(true);
+                          }}
+                          className="rounded-full p-1.5 text-white/80 hover:text-white"
                         >
-                          <KeyRound className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </button>
-                      )}
-                      <button
-                        aria-label="Excluir conta"
-                        title={podeGerenciar ? "Excluir conta" : "Só a conta master pode excluir contas"}
-                        onClick={() => excluirAcesso(c.id, c.email)}
-                        disabled={!podeGerenciar}
-                        className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                      </Travado>
+                        <button
+                          aria-label="Remover apoiador"
+                          onClick={() => removerPatrocinador(s.id)}
+                          className="rounded-full p-1.5 text-white/80 hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                    </li>
-                    );
-                  })}
-                  {acessos.isSuccess && listaAcessos.length === 0 && (
-                    <li className="py-4 text-sm text-muted-foreground">
-                      Nenhuma solicitação de acesso no momento.
-                    </li>
-                  )}
-                </ul>
-                <Paginacao pagina={pgAcessos} totalPaginas={totalPgAcessos} onChange={setPgAcessos} />
-              </section>
-            </>
-          )}
-        </div>
+                    </Travado>
+                  </div>
+                ))}
+                {patrocinadores.isSuccess && doNivel.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum apoiador cadastrado neste nível.
+                  </p>
+                )}
+              </div>
+              <Paginacao
+                pagina={pgApoiadoresAtual}
+                totalPaginas={totalPgApoiadores}
+                onChange={setPgApoiadores}
+              />
 
+              <Travado>
+                <button
+                  onClick={() => {
+                    setSponsorEdit(null);
+                    setSponsorOpen(true);
+                  }}
+                  className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                >
+                  <CirclePlus className="h-5 w-5" />
+                  Adicionar apoiador
+                </button>
+              </Travado>
+            </section>
 
-        <ResetAnoModal open={resetOpen} onOpenChange={setResetOpen} />
-        {dialogoConfirmar}
-        <PalestraModal
-          open={palestraOpen}
-          onOpenChange={setPalestraOpen}
-          palestra={palestraEdit}
-          onSaved={() => queryClient.invalidateQueries({ queryKey: ["palestras"] })}
-        />
-        <PatrocinadorModal
-          open={sponsorOpen}
-          onOpenChange={setSponsorOpen}
-          patrocinador={sponsorEdit}
-          nivelPadrao={nivelAtivo}
-          onSaved={() => queryClient.invalidateQueries({ queryKey: ["patrocinadores"] })}
-        />
-        <ComissaoModal
-          open={comissaoOpen}
-          onOpenChange={setComissaoOpen}
-          membro={comissaoEdit}
-          grupoPadrao={grupoAtivo}
-          onSaved={() => queryClient.invalidateQueries({ queryKey: ["comissao"] })}
-        />
-      </main>
+            {/* Comissão */}
+            <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
+              <Users className="h-5 w-5 text-primary-glow" />
+              Comissão
+            </h2>
+            <section className="panel-surface mt-5 p-4 sm:p-7">
+              <div className="flex flex-wrap gap-8 border-b border-border/40 pb-4">
+                {GRUPOS_COMISSAO.map((g) => {
+                  const total = (comissao.data ?? []).filter((m) => m.grupo === g.value).length;
+                  return (
+                    <button
+                      key={g.value}
+                      onClick={() => {
+                        setGrupoAtivo(g.value);
+                        setPgComissao(1);
+                      }}
+                      className={`text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                        grupoAtivo === g.value
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground/80"
+                      }`}
+                    >
+                      {g.label}
+                      <span className="ml-2 text-[10px] opacity-60">({total})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <StatusConsulta consulta={comissao} nome="a comissão" />
+              {membrosDoGrupo.length === 0 ? (
+                comissao.isSuccess ? (
+                  <p className="mt-6 text-sm text-muted-foreground">
+                    Nenhum membro cadastrado neste grupo.
+                  </p>
+                ) : null
+              ) : (
+                <div className="mt-6 space-y-6">
+                  {(semestresDoGrupo(grupoAtivo)
+                    ? porSemestre(membrosDoGrupo)
+                    : [{ semestre: 0, membros: membrosDoGrupo }]
+                  ).map((bloco) => (
+                    <div key={bloco.semestre}>
+                      {bloco.semestre > 0 && (
+                        <p className="mb-3 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                          <span className="text-foreground">{bloco.semestre}º semestre</span>
+                          <span className="opacity-60">({bloco.membros.length})</span>
+                          <span className="h-px flex-1 bg-border/40" />
+                        </p>
+                      )}
+                      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {bloco.membros.map((m) => (
+                          <li
+                            key={m.id}
+                            className="group flex min-w-0 items-center gap-3 rounded-2xl border border-border/60 bg-field/40 px-4 py-3 transition-colors hover:border-primary/40"
+                          >
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary-glow">
+                              {initials(m.nome)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className="truncate text-sm font-medium text-foreground"
+                                title={m.nome}
+                              >
+                                {m.nome}
+                              </p>
+                              <p
+                                className="truncate text-xs text-muted-foreground"
+                                title={m.email ?? undefined}
+                              >
+                                {m.email || "Sem e-mail"}
+                              </p>
+                            </div>
+                            <Travado>
+                              <div className="flex shrink-0 items-center gap-0.5 acoes-hover">
+                                <button
+                                  aria-label="Editar membro"
+                                  onClick={() => {
+                                    setComissaoEdit(m);
+                                    setComissaoOpen(true);
+                                  }}
+                                  className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  aria-label="Remover membro"
+                                  onClick={() => removerMembro(m.id)}
+                                  className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </Travado>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Paginacao
+                pagina={pgComissaoAtual}
+                totalPaginas={totalPgComissao}
+                onChange={setPgComissao}
+              />
+
+              <Travado>
+                <button
+                  onClick={() => {
+                    setComissaoEdit(null);
+                    setComissaoOpen(true);
+                  }}
+                  className="mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 text-[13px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                >
+                  <CirclePlus className="h-5 w-5" />
+                  Adicionar membro
+                </button>
+              </Travado>
+            </section>
+
+            {/* Controle de Acessos — administradores, master e quem tem acesso total temporário */}
+            {veAcessos && (
+              <>
+                <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">
+                  <ShieldCheck className="h-5 w-5 text-primary-glow" />
+                  Controle de Acessos
+                </h2>
+                <section className="panel-surface mt-5 p-4 sm:p-7">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {acessoTotal
+                      ? "Libere ou bloqueie o acesso ao painel e defina o nível de cada conta. Usuários comuns gerenciam o evento, mas não acessam o Controle de Acessos nem a lista de presença."
+                      : "Libere as contas que pediram acesso: elas entram como usuário comum. Mudar o nível, desativar e excluir contas é feito pela conta master."}
+                  </p>
+                  <StatusConsulta consulta={acessos} nome="os acessos" />
+                  <ul className="mt-5 divide-y divide-border/40">
+                    {acessosPagina.map((c) => {
+                      const ehVoce = c.id === meuPerfil.data?.id;
+                      const editavel = !ehVoce && !c.master;
+                      // master / acesso total: tudo; administrador: só liberar contas novas de usuário comum
+                      const podeAtivar =
+                        editavel && (acessoTotal || (isAdmin && !c.ativo && c.role === "user"));
+                      const podeGerenciar = editavel && acessoTotal;
+                      const temporario = temAcessoTemporario(c);
+                      const ultimo = ultimosAcessos.data?.get(c.id);
+                      return (
+                        <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 py-4">
+                          <div className="min-w-0 flex-1 basis-56">
+                            <p className="truncate text-[15px] text-foreground">{c.email}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {c.ativo ? "Acesso liberado" : "Aguardando liberação"}
+                              {ehVoce && " • você"}
+                              {isMaster && ultimosAcessos.isSuccess && (
+                                <>
+                                  {" • "}
+                                  {ultimo
+                                    ? `último acesso ${new Date(ultimo).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+                                    : "nunca entrou"}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          {c.master && (
+                            <span
+                              title="Conta master: não pode ser alterada, desativada nem excluída"
+                              className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 text-xs font-medium text-primary-glow"
+                            >
+                              <Lock className="h-3.5 w-3.5" />
+                              Conta master
+                            </span>
+                          )}
+                          {temporario && (
+                            <span
+                              title="Acesso total temporário concedido pela conta master"
+                              className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 text-xs font-medium text-amber-300 [.light_&]:text-amber-700"
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              Acesso total até{" "}
+                              {new Date(c.acesso_total_ate!).toLocaleString("pt-BR", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              })}
+                              {isMaster && (
+                                <button
+                                  onClick={() => revogarAcessoTotal(c)}
+                                  aria-label={`Retirar acesso total de ${c.email}`}
+                                  title="Retirar acesso total"
+                                  className="-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-amber-400/20"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
+                            </span>
+                          )}
+                          {/* No celular os controles ocupam uma linha só, abaixo do e-mail */}
+                          <div className="flex w-full items-center gap-2 sm:w-auto">
+                            <Travado>
+                              {isMaster && editavel && c.ativo && !temporario && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      title="Conceder acesso total temporário"
+                                      aria-label="Conceder acesso total temporário"
+                                      className="flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-border/70 text-sm text-muted-foreground transition-colors hover:border-amber-400/60 hover:text-foreground sm:w-auto sm:px-4"
+                                    >
+                                      <Zap className="h-4 w-4" />
+                                      <span className="hidden sm:inline">Acesso total</span>
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {(
+                                      [
+                                        [1, "Por 1 hora"],
+                                        [24, "Por 24 horas"],
+                                        [24 * 7, "Por 7 dias"],
+                                      ] as const
+                                    ).map(([h, r]) => (
+                                      <DropdownMenuItem
+                                        key={h}
+                                        onClick={() => concederAcessoTotal(c, h)}
+                                      >
+                                        {r}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                              <div className="relative min-w-0 flex-1 sm:flex-none">
+                                <select
+                                  aria-label={`Nível de ${c.email}`}
+                                  value={c.role}
+                                  disabled={!podeGerenciar}
+                                  title={
+                                    podeGerenciar
+                                      ? undefined
+                                      : "Só a conta master pode mudar o nível"
+                                  }
+                                  onChange={(e) =>
+                                    atualizarAcesso(c.id, { role: e.target.value as AppRole })
+                                  }
+                                  className="field-pill h-10 w-full appearance-none py-0 pl-4 pr-10 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                >
+                                  <option value="admin">Administrador</option>
+                                  <option value="user">Usuário comum</option>
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                              </div>
+                              <button
+                                onClick={() => atualizarAcesso(c.id, { ativo: !c.ativo })}
+                                disabled={!podeAtivar}
+                                title={
+                                  podeAtivar ? undefined : "Só a conta master pode desativar contas"
+                                }
+                                aria-label={c.ativo ? "Desativar" : "Liberar"}
+                                className={`flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm transition-colors sm:px-5 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                  c.ativo
+                                    ? "border border-border/70 text-muted-foreground hover:text-foreground"
+                                    : "bg-primary text-primary-foreground hover:bg-primary-glow"
+                                }`}
+                              >
+                                {c.ativo ? (
+                                  <UserX className="h-4 w-4" />
+                                ) : (
+                                  <UserCheck className="h-4 w-4" />
+                                )}
+                                <span className={c.ativo ? "hidden sm:inline" : undefined}>
+                                  {c.ativo ? "Desativar" : "Liberar"}
+                                </span>
+                              </button>
+                              {acessoTotal && (
+                                <button
+                                  aria-label={`Enviar redefinição de senha para ${c.email}`}
+                                  title="Enviar redefinição de senha"
+                                  onClick={() => enviarRedefinicao(c.email)}
+                                  disabled={!podeGerenciar}
+                                  className="rounded-full p-2 text-muted-foreground hover:bg-primary/15 hover:text-primary-glow disabled:pointer-events-none disabled:opacity-40"
+                                >
+                                  <KeyRound className="h-4 w-4" />
+                                </button>
+                              )}
+                              <button
+                                aria-label="Excluir conta"
+                                title={
+                                  podeGerenciar
+                                    ? "Excluir conta"
+                                    : "Só a conta master pode excluir contas"
+                                }
+                                onClick={() => excluirAcesso(c.id, c.email)}
+                                disabled={!podeGerenciar}
+                                className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </Travado>
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {acessos.isSuccess && listaAcessos.length === 0 && (
+                      <li className="py-4 text-sm text-muted-foreground">
+                        Nenhuma solicitação de acesso no momento.
+                      </li>
+                    )}
+                  </ul>
+                  <Paginacao
+                    pagina={pgAcessos}
+                    totalPaginas={totalPgAcessos}
+                    onChange={setPgAcessos}
+                  />
+                </section>
+              </>
+            )}
+          </div>
+
+          <ResetAnoModal open={resetOpen} onOpenChange={setResetOpen} />
+          {dialogoConfirmar}
+          <PalestraModal
+            open={palestraOpen}
+            onOpenChange={setPalestraOpen}
+            palestra={palestraEdit}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["palestras"] })}
+          />
+          <PatrocinadorModal
+            open={sponsorOpen}
+            onOpenChange={setSponsorOpen}
+            patrocinador={sponsorEdit}
+            nivelPadrao={nivelAtivo}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["patrocinadores"] })}
+          />
+          <ComissaoModal
+            open={comissaoOpen}
+            onOpenChange={setComissaoOpen}
+            membro={comissaoEdit}
+            grupoPadrao={grupoAtivo}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["comissao"] })}
+          />
+        </main>
       </CongeladoContext.Provider>
     </>
   );

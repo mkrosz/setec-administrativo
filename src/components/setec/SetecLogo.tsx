@@ -68,14 +68,7 @@ function CustomLogoImage({
 
   if (hasError) return <>{fallback}</>;
 
-  return (
-    <img
-      src={src}
-      alt={alt}
-      onError={() => setHasError(true)}
-      className={className}
-    />
-  );
+  return <img src={src} alt={alt} onError={() => setHasError(true)} className={className} />;
 }
 
 /** Marca isolada / compacto */

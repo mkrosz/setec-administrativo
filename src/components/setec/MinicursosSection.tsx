@@ -12,7 +12,6 @@ import { Paginacao } from "@/components/setec/Paginacao";
 import { PalestraModal } from "@/components/setec/PalestraModal";
 import { formatDia, formatHora, mensagemErro, type Minicurso } from "@/lib/setec";
 
-
 /** Minicursos do painel (compartilhado entre a aba e o contador da aba). */
 export function useMinicursos() {
   return useQuery({
@@ -56,7 +55,9 @@ export function MinicursosSection({
   const inscricoes = useQuery({
     queryKey: ["minicurso_inscricoes", "contagem"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("minicurso_inscricoes" as any).select("minicurso_id");
+      const { data, error } = await supabase
+        .from("minicurso_inscricoes" as any)
+        .select("minicurso_id");
       if (error) throw error;
       return (data ?? []) as unknown as { minicurso_id: string }[];
     },
@@ -64,7 +65,8 @@ export function MinicursosSection({
 
   const totalPorMinicurso = useMemo(() => {
     const mapa = new Map<string, number>();
-    for (const i of inscricoes.data ?? []) mapa.set(i.minicurso_id, (mapa.get(i.minicurso_id) ?? 0) + 1);
+    for (const i of inscricoes.data ?? [])
+      mapa.set(i.minicurso_id, (mapa.get(i.minicurso_id) ?? 0) + 1);
     return mapa;
   }, [inscricoes.data]);
 
@@ -84,7 +86,8 @@ export function MinicursosSection({
           <strong className="text-foreground">{m.titulo || "(Sem título)"}</strong> será apagado
           {total > 0 ? (
             <>
-              {" "}junto com <strong className="text-foreground">{total}</strong>{" "}
+              {" "}
+              junto com <strong className="text-foreground">{total}</strong>{" "}
               {total === 1 ? "inscrição" : "inscrições"}
             </>
           ) : null}
@@ -94,7 +97,10 @@ export function MinicursosSection({
       confirmar: "Remover",
     });
     if (!ok) return;
-    const { error } = await supabase.from("minicursos" as any).delete().eq("id", m.id);
+    const { error } = await supabase
+      .from("minicursos" as any)
+      .delete()
+      .eq("id", m.id);
     if (error) {
       toast.error(mensagemErro(error));
       return;
@@ -106,58 +112,61 @@ export function MinicursosSection({
 
   return (
     <>
-        {minicursos.isError ? (
-          <p className="text-sm text-muted-foreground">
-            Não foi possível carregar os minicursos. {mensagemErro(minicursos.error)}
-          </p>
-        ) : (
-          <ul className="divide-y divide-border/40">
-            {visiveis.map((m) => {
-              const inscritos = totalPorMinicurso.get(m.id) ?? 0;
-              const esgotado = inscritos >= m.vagas;
-              const nomes = (m.ministrantes ?? []).map((x) => x.nome).filter(Boolean).join(", ");
-              return (
-                <li key={m.id} className="group flex items-center gap-4 py-4">
-                  <AvataresPessoas pessoas={m.ministrantes ?? []} />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 truncate text-base text-foreground">
-                      <span className="truncate">{m.titulo || "(Sem título)"}</span>
-                      {m.rascunho && (
-                        <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
-                          Rascunho
-                        </span>
-                      )}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {nomes || "Ministrante não informado"}
-                    </p>
-                  </div>
-                  <div className="hidden text-right sm:block">
-                    <p className="text-sm font-semibold text-foreground">
-                      {m.data ? formatDia(m.data) : "Sem data"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {m.hora_inicio && m.hora_fim
-                        ? `${formatHora(m.hora_inicio)} - ${formatHora(m.hora_fim)}`
-                        : "Sem horário"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setInscritosDe(m)}
-                    title="Ver lista de inscritos"
-                    className={`flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-xs font-medium transition-colors ${
-                      esgotado
-                        ? "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/70"
-                        : "border-border/60 text-foreground hover:border-primary/60"
-                    }`}
-                  >
-                    <ListChecks className="h-4 w-4" />
-                    <span className="tabular-nums">
-                      {inscritos}/{m.vagas}
-                    </span>
-                    <span className="hidden md:inline">{esgotado ? "esgotado" : "inscritos"}</span>
-                  </button>
-                  <Travado>
+      {minicursos.isError ? (
+        <p className="text-sm text-muted-foreground">
+          Não foi possível carregar os minicursos. {mensagemErro(minicursos.error)}
+        </p>
+      ) : (
+        <ul className="divide-y divide-border/40">
+          {visiveis.map((m) => {
+            const inscritos = totalPorMinicurso.get(m.id) ?? 0;
+            const esgotado = inscritos >= m.vagas;
+            const nomes = (m.ministrantes ?? [])
+              .map((x) => x.nome)
+              .filter(Boolean)
+              .join(", ");
+            return (
+              <li key={m.id} className="group flex items-center gap-4 py-4">
+                <AvataresPessoas pessoas={m.ministrantes ?? []} />
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 truncate text-base text-foreground">
+                    <span className="truncate">{m.titulo || "(Sem título)"}</span>
+                    {m.rascunho && (
+                      <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                        Rascunho
+                      </span>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {nomes || "Ministrante não informado"}
+                  </p>
+                </div>
+                <div className="hidden text-right sm:block">
+                  <p className="text-sm font-semibold text-foreground">
+                    {m.data ? formatDia(m.data) : "Sem data"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.hora_inicio && m.hora_fim
+                      ? `${formatHora(m.hora_inicio)} - ${formatHora(m.hora_fim)}`
+                      : "Sem horário"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setInscritosDe(m)}
+                  title="Ver lista de inscritos"
+                  className={`flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-xs font-medium transition-colors ${
+                    esgotado
+                      ? "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/70"
+                      : "border-border/60 text-foreground hover:border-primary/60"
+                  }`}
+                >
+                  <ListChecks className="h-4 w-4" />
+                  <span className="tabular-nums">
+                    {inscritos}/{m.vagas}
+                  </span>
+                  <span className="hidden md:inline">{esgotado ? "esgotado" : "inscritos"}</span>
+                </button>
+                <Travado>
                   <div className="flex items-center gap-1 acoes-hover">
                     <button
                       aria-label="Editar minicurso"
@@ -177,19 +186,19 @@ export function MinicursosSection({
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  </Travado>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {minicursos.isLoading && <p className="py-4 text-sm text-muted-foreground">Carregando…</p>}
-        {!minicursos.isError && !minicursos.isLoading && lista.length === 0 && (
-          <p className="py-4 text-sm text-muted-foreground">Nenhum minicurso cadastrado.</p>
-        )}
-        <Paginacao pagina={paginaAtual} totalPaginas={totalPaginas} onChange={onPagina} />
+                </Travado>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {minicursos.isLoading && <p className="py-4 text-sm text-muted-foreground">Carregando…</p>}
+      {!minicursos.isError && !minicursos.isLoading && lista.length === 0 && (
+        <p className="py-4 text-sm text-muted-foreground">Nenhum minicurso cadastrado.</p>
+      )}
+      <Paginacao pagina={paginaAtual} totalPaginas={totalPaginas} onChange={onPagina} />
 
-        <Travado>
+      <Travado>
         <button
           onClick={() => {
             setEditando(null);
@@ -200,7 +209,7 @@ export function MinicursosSection({
           <CirclePlus className="h-5 w-5" />
           Adicionar minicurso
         </button>
-        </Travado>
+      </Travado>
 
       <PalestraModal
         tipo="minicurso"

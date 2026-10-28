@@ -18,7 +18,11 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-const REMETENTES_DEVOLUCAO = ["mailer-daemon@googlemail.com", "mailer-daemon@google.com", "postmaster"];
+const REMETENTES_DEVOLUCAO = [
+  "mailer-daemon@googlemail.com",
+  "mailer-daemon@google.com",
+  "postmaster",
+];
 
 /** Extrai os destinatários que falharam e um motivo legível de uma mensagem de devolução. */
 export function lerDevolucao(fonte: string): { emails: string[]; motivo: string } {
@@ -38,11 +42,19 @@ export function lerDevolucao(fonte: string): { emails: string[]; motivo: string 
   }
 
   let motivo = "o endereço não existe ou não pode receber e-mails";
-  if (/550[ -]5\.1\.1|does not exist|doesn't exist|user unknown|no such user|address not found|não foi encontrado|endereço não encontrado/i.test(texto)) {
+  if (
+    /550[ -]5\.1\.1|does not exist|doesn't exist|user unknown|no such user|address not found|não foi encontrado|endereço não encontrado/i.test(
+      texto,
+    )
+  ) {
     motivo = "a caixa de e-mail não existe";
   } else if (/mailbox (is )?full|over quota|quota exceeded|caixa.*cheia/i.test(texto)) {
     motivo = "a caixa de e-mail do destinatário está cheia";
-  } else if (/domain.*(not found|couldn't be found)|DNS Error|não foi possível encontrar o domínio/i.test(texto)) {
+  } else if (
+    /domain.*(not found|couldn't be found)|DNS Error|não foi possível encontrar o domínio/i.test(
+      texto,
+    )
+  ) {
     motivo = "o domínio do e-mail não existe";
   }
   return { emails: [...emails], motivo };
@@ -53,7 +65,8 @@ Deno.serve(async (req) => {
 
   const user = Deno.env.get("GMAIL_USER");
   const pass = Deno.env.get("GMAIL_APP_PASSWORD");
-  if (!user || !pass) return new Response("GMAIL_USER/GMAIL_APP_PASSWORD não configurados", { status: 200 });
+  if (!user || !pass)
+    return new Response("GMAIL_USER/GMAIL_APP_PASSWORD não configurados", { status: 200 });
 
   const client = new ImapFlow({
     host: "imap.gmail.com",
@@ -79,7 +92,11 @@ Deno.serve(async (req) => {
       }
 
       for (const uid of uids) {
-        const msg = await client.fetchOne(String(uid), { source: true, envelope: true }, { uid: true });
+        const msg = await client.fetchOne(
+          String(uid),
+          { source: true, envelope: true },
+          { uid: true },
+        );
         if (!msg || !msg.source) continue;
         const { emails, motivo } = lerDevolucao(msg.source.toString("utf8"));
         const recebidaEm = msg.envelope?.date ? new Date(msg.envelope.date) : new Date();
@@ -121,7 +138,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ ok: true, devolucoes: processadas, inscricoesMarcadas: marcadas }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ ok: true, devolucoes: processadas, inscricoesMarcadas: marcadas }),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 });

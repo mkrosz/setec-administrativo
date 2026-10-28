@@ -61,14 +61,20 @@ export function useConfirmar() {
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[min(440px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-border/60 bg-card p-6 shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="flex items-start gap-4">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${caixa}`}>
+            <span
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${caixa}`}
+            >
               <Icone className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <Dialog.Title className="font-display text-lg font-bold text-foreground">{opcoes?.titulo}</Dialog.Title>
+              <Dialog.Title className="font-display text-lg font-bold text-foreground">
+                {opcoes?.titulo}
+              </Dialog.Title>
               {opcoes?.descricao && (
                 <Dialog.Description asChild>
-                  <div className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{opcoes.descricao}</div>
+                  <div className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    {opcoes.descricao}
+                  </div>
                 </Dialog.Description>
               )}
             </div>

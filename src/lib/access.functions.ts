@@ -4,7 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 /** Solicitação pública de acesso: cria a conta bloqueada, aguardando liberação de um administrador. */
 export const solicitarAcesso = createServerFn({ method: "POST" })
   .inputValidator((input: { email: string; password: string }) => {
-    const email = String(input?.email ?? "").trim().toLowerCase();
+    const email = String(input?.email ?? "")
+      .trim()
+      .toLowerCase();
     const password = String(input?.password ?? "");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("E-mail inválido");
     if (password.length < 6) throw new Error("A senha precisa ter ao menos 6 caracteres");
@@ -42,7 +44,6 @@ export const solicitarAcesso = createServerFn({ method: "POST" })
     return { ok: true, autoAprovado: semAdmin };
   });
 
-
 /** Remove definitivamente uma conta (somente a master ou quem tem acesso total temporário). */
 export const removerAcesso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -54,7 +55,8 @@ export const removerAcesso = createServerFn({ method: "POST" })
     );
     if (roleError) throw new Error(roleError.message);
     if (!podeExcluir) throw new Error("Apenas a conta master pode excluir contas");
-    if (data.userId === context.userId) throw new Error("Você não pode remover a própria conta aqui");
+    if (data.userId === context.userId)
+      throw new Error("Você não pode remover a própria conta aqui");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: alvo } = await supabaseAdmin
@@ -62,9 +64,13 @@ export const removerAcesso = createServerFn({ method: "POST" })
       .select("*")
       .eq("id", data.userId)
       .maybeSingle();
-    if ((alvo as { master?: boolean } | null)?.master) throw new Error("A conta master não pode ser excluída");
+    if ((alvo as { master?: boolean } | null)?.master)
+      throw new Error("A conta master não pode ser excluída");
 
-    const { error: perfilError } = await supabaseAdmin.from("profiles").delete().eq("id", data.userId);
+    const { error: perfilError } = await supabaseAdmin
+      .from("profiles")
+      .delete()
+      .eq("id", data.userId);
     if (perfilError) throw new Error(perfilError.message);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);

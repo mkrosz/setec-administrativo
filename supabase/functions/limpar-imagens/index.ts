@@ -92,7 +92,9 @@ Deno.serve(async (req) => {
       .from("storage_imagens_orfas")
       .select("caminho, orfa_desde");
     if (e2) throw new Error(`storage_imagens_orfas: ${e2.message}`);
-    const jaOrfas = new Map((orfasAtuais ?? []).map((o) => [o.caminho as string, new Date(o.orfa_desde as string)]));
+    const jaOrfas = new Map(
+      (orfasAtuais ?? []).map((o) => [o.caminho as string, new Date(o.orfa_desde as string)]),
+    );
 
     const semUso = [...arquivos].filter((c) => !usados.has(c));
     const novas = semUso.filter((c) => !jaOrfas.has(c));
@@ -108,9 +110,10 @@ Deno.serve(async (req) => {
 
     if (!simular) {
       if (novas.length) {
-        const { error } = await supabase
-          .from("storage_imagens_orfas")
-          .upsert(novas.map((caminho) => ({ caminho })), { onConflict: "caminho", ignoreDuplicates: true });
+        const { error } = await supabase.from("storage_imagens_orfas").upsert(
+          novas.map((caminho) => ({ caminho })),
+          { onConflict: "caminho", ignoreDuplicates: true },
+        );
         if (error) throw error;
       }
       if (sair.length) {
@@ -137,7 +140,9 @@ Deno.serve(async (req) => {
       ...(simular ? { seriamApagadas: apagar } : {}),
     };
     console.log("limpar-imagens:", JSON.stringify(resumo));
-    return new Response(JSON.stringify(resumo), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(resumo), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("limpar-imagens:", msg);

@@ -14,7 +14,12 @@ export function Paginacao({ pagina, totalPaginas, onChange }: Props) {
 
   return (
     <div className="mt-5 flex items-center justify-center gap-2">
-      <button className={btn} onClick={() => onChange(pagina - 1)} disabled={pagina <= 1} aria-label="Página anterior">
+      <button
+        className={btn}
+        onClick={() => onChange(pagina - 1)}
+        disabled={pagina <= 1}
+        aria-label="Página anterior"
+      >
         <ChevronLeft className="h-4 w-4" />
       </button>
       {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
