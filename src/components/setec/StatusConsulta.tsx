@@ -31,7 +31,9 @@ export function StatusConsulta({ consulta, nome }: { consulta: Consulta; nome: s
         <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
         <span className="min-w-0 flex-1">
           Não foi possível carregar {nome}.{" "}
-          <span className="text-muted-foreground">{mensagemErro(consulta.error, "Tente novamente.")}</span>
+          <span className="text-muted-foreground">
+            {mensagemErro(consulta.error, "Tente novamente.")}
+          </span>
         </span>
         <button
           type="button"

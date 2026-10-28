@@ -1,6 +1,12 @@
 import { jsPDF } from "jspdf";
 
-import { formatDataHora, formatDia, formatHora, type InscricaoMinicurso, type Minicurso } from "@/lib/setec";
+import {
+  formatDataHora,
+  formatDia,
+  formatHora,
+  type InscricaoMinicurso,
+  type Minicurso,
+} from "@/lib/setec";
 
 const ROXO: [number, number, number] = [112, 72, 200];
 const CINZA: [number, number, number] = [110, 110, 120];
@@ -128,7 +134,9 @@ export function exportarInscritosMinicurso(minicurso: Minicurso, inscritos: Insc
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...CINZA);
-    doc.text(`Página ${n} de ${paginas}`, larguraPagina - margem, alturaPagina - 20, { align: "right" });
+    doc.text(`Página ${n} de ${paginas}`, larguraPagina - margem, alturaPagina - 20, {
+      align: "right",
+    });
   }
 
   const slug = (minicurso.titulo || "minicurso")

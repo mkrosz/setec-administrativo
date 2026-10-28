@@ -23,7 +23,9 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="max-w-md text-center">
         <p className="font-display text-8xl font-black text-primary-glow">404</p>
-        <h1 className="mt-4 font-display text-2xl font-bold text-foreground">Página não encontrada</h1>
+        <h1 className="mt-4 font-display text-2xl font-bold text-foreground">
+          Página não encontrada
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           O endereço que você abriu não existe ou foi movido.
         </p>
@@ -49,7 +51,9 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="max-w-md text-center">
-        <h1 className="font-display text-2xl font-bold text-foreground">Esta página não carregou</h1>
+        <h1 className="font-display text-2xl font-bold text-foreground">
+          Esta página não carregou
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Algo deu errado do nosso lado. Tente de novo ou volte para o início.
         </p>
@@ -112,7 +116,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
-
 
 function RootShell({ children }: { children: ReactNode }) {
   return (

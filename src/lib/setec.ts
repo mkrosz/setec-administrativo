@@ -253,20 +253,7 @@ export function initials(name: string) {
   return letters.toUpperCase();
 }
 
-const MESES = [
-  "Jan",
-  "Fev",
-  "Mar",
-  "Abr",
-  "Maio",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Set",
-  "Out",
-  "Nov",
-  "Dez",
-];
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Maio", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export function formatDia(data: string | null) {
   if (!data) return "";
@@ -346,22 +333,49 @@ export function formatDataHora(iso: string) {
 /** Mensagem legível de erros do Supabase (PostgrestError nem sempre é instanceof Error). */
 /** Erros técnicos comuns (Supabase, rede) traduzidos para quem usa o painel. */
 const TRADUCOES_ERRO: [RegExp, string][] = [
-  [/failed to fetch|networkerror|network request failed|load failed|fetch failed/i, "Sem conexão com o servidor. Verifique sua internet e tente de novo."],
+  [
+    /failed to fetch|networkerror|network request failed|load failed|fetch failed/i,
+    "Sem conexão com o servidor. Verifique sua internet e tente de novo.",
+  ],
   [/invalid login credentials/i, "E-mail ou senha incorretos."],
   [/email not confirmed/i, "Este e-mail ainda não foi confirmado."],
   [/user already registered|already been registered/i, "Já existe uma conta com este e-mail."],
   [/should be different from the old password/i, "A nova senha precisa ser diferente da atual."],
   [/password should be at least/i, "A senha precisa ter pelo menos 6 caracteres."],
-  [/jwt expired|invalid jwt|session.*(expired|missing)|refresh token/i, "Sua sessão expirou. Entre novamente."],
-  [/rate limit|too many requests|security purposes/i, "Muitas tentativas seguidas. Aguarde um pouco e tente de novo."],
-  [/row-level security|permission denied|not authorized|unauthorized/i, "Você não tem permissão para fazer isso."],
+  [
+    /jwt expired|invalid jwt|session.*(expired|missing)|refresh token/i,
+    "Sua sessão expirou. Entre novamente.",
+  ],
+  [
+    /rate limit|too many requests|security purposes/i,
+    "Muitas tentativas seguidas. Aguarde um pouco e tente de novo.",
+  ],
+  [
+    /row-level security|permission denied|not authorized|unauthorized/i,
+    "Você não tem permissão para fazer isso.",
+  ],
   [/duplicate key|already exists|23505/i, "Esse registro já existe."],
-  [/violates foreign key|23503/i, "Este item está ligado a outros registros e não pode ser alterado assim."],
-  [/violates check constraint|23514|invalid input syntax|22P02|22007|22008/i, "Algum dado foi preenchido em formato inválido. Confira os campos."],
-  [/schema cache|does not exist|PGRST20[45]|42P01|42703|could not find the (table|function|column)/i, "Este recurso ainda não está disponível. Avise o responsável técnico pelo painel."],
-  [/payload too large|entity too large|exceeded the maximum allowed size/i, "O arquivo é grande demais."],
+  [
+    /violates foreign key|23503/i,
+    "Este item está ligado a outros registros e não pode ser alterado assim.",
+  ],
+  [
+    /violates check constraint|23514|invalid input syntax|22P02|22007|22008/i,
+    "Algum dado foi preenchido em formato inválido. Confira os campos.",
+  ],
+  [
+    /schema cache|does not exist|PGRST20[45]|42P01|42703|could not find the (table|function|column)/i,
+    "Este recurso ainda não está disponível. Avise o responsável técnico pelo painel.",
+  ],
+  [
+    /payload too large|entity too large|exceeded the maximum allowed size/i,
+    "O arquivo é grande demais.",
+  ],
   [/timeout|timed out/i, "O servidor demorou para responder. Tente de novo."],
-  [/unexpected token|is not valid json|unexpected end of json/i, "Não foi possível ler os dados recebidos."],
+  [
+    /unexpected token|is not valid json|unexpected end of json/i,
+    "Não foi possível ler os dados recebidos.",
+  ],
 ];
 
 /**

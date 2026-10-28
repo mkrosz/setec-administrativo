@@ -81,7 +81,8 @@ function Perfil() {
     const ok = await confirmar({
       tom: "perigo",
       titulo: "Excluir seu perfil",
-      descricao: "Sua conta e o seu acesso ao painel serão excluídos permanentemente. Esta ação não pode ser desfeita.",
+      descricao:
+        "Sua conta e o seu acesso ao painel serão excluídos permanentemente. Esta ação não pode ser desfeita.",
       confirmar: "Excluir perfil",
     });
     if (!ok) return;
@@ -179,7 +180,11 @@ function Perfil() {
             disabled={removing}
             className="mt-6 flex h-12 items-center justify-center gap-2 rounded-full border border-destructive/60 px-7 text-sm text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
           >
-            {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            {removing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
             Excluir meu perfil
           </button>
         </section>

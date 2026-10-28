@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissão mínima: a pipeline só lê o código.
+permissions:
+  contents: read
+
+# Um push novo na mesma branch cancela a execução anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 24
+  PNPM_VERSION: 12.8.1
+
+jobs:
+  qualidade:
+    name: Qualidade, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Validar estrutura do projeto
+        run: pnpm run validate
+
+      - name: Verificar formatação (Prettier)
+        run: pnpm run format:check
+
+      - name: Lint (ESLint)
+        run: pnpm run lint
+
+      - name: Checagem de tipos (TypeScript)
+        run: pnpm run typecheck
+
+      - name: Testes automatizados
+        run: pnpm run --if-present test
+
+      - name: Build da aplicação
+        run: pnpm run build
+
+  seguranca:
+    name: Verificação de vulnerabilidades
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Relatório informativo: as vulnerabilidades vêm de dependências de terceiros
+      # e são acompanhadas no roadmap, por isso não bloqueiam o merge.
+      - name: Auditoria das dependências de produção
+        run: pnpm audit --prod --audit-level high
+        continue-on-error: true

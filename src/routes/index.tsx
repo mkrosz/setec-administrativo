@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { mensagemErro } from "@/lib/setec";
 
 import { supabase } from "@/integrations/supabase/client";
-import { registrarLembrar, sessaoExpirouPorFecharNavegador, ultimaEscolhaLembrar } from "@/lib/lembrar";
+import {
+  registrarLembrar,
+  sessaoExpirouPorFecharNavegador,
+  ultimaEscolhaLembrar,
+} from "@/lib/lembrar";
 import { SetecLogo } from "@/components/setec/SetecLogo";
 import { useForceDarkTheme } from "@/hooks/use-theme";
 import { solicitarAcesso } from "@/lib/access.functions";
-
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -110,7 +113,6 @@ function LoginPage() {
       setLoading(false);
     }
   }
-
 
   async function onForgot() {
     if (!email) {

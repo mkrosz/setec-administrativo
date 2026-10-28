@@ -17,14 +17,35 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-const DIAS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const DIAS = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
 const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 const esc = (s: unknown) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 
 function dataExtenso(data: string | null) {
   if (!data) return "Data a definir";
@@ -42,13 +63,22 @@ function montarEmail(insc: Record<string, any>, mc: Record<string, any>, edicao:
     .map((m: any) => m?.nome)
     .filter(Boolean)
     .join(", ");
-  const horario = mc.hora_inicio ? `${hora(mc.hora_inicio)}${mc.hora_fim ? ` às ${hora(mc.hora_fim)}` : ""}` : "A definir";
+  const horario = mc.hora_inicio
+    ? `${hora(mc.hora_inicio)}${mc.hora_fim ? ` às ${hora(mc.hora_fim)}` : ""}`
+    : "A definir";
 
   const linhas: [string, string][] = [
     ["Data", dataExtenso(mc.data)],
     ["Horário", horario],
     ["Local", mc.local || "A definir"],
-    ...(ministrantes ? [["Ministrante" + (ministrantes.includes(",") ? "s" : ""), ministrantes] as [string, string]] : []),
+    ...(ministrantes
+      ? [
+          ["Ministrante" + (ministrantes.includes(",") ? "s" : ""), ministrantes] as [
+            string,
+            string,
+          ],
+        ]
+      : []),
     ["Inscrito", `${insc.nome_completo} • RA ${insc.ra} • ${insc.turma}`],
   ];
 
@@ -108,7 +138,9 @@ async function dominioRecebeEmail(email: string): Promise<boolean> {
   const dominio = email.split("@")[1]?.trim().toLowerCase();
   if (!dominio) return false;
   const consultar = async (tipo: "MX" | "A") => {
-    const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(dominio)}&type=${tipo}`);
+    const res = await fetch(
+      `https://dns.google/resolve?name=${encodeURIComponent(dominio)}&type=${tipo}`,
+    );
     if (!res.ok) throw new Error("DNS indisponível");
     const json = await res.json();
     if (json.Status === 3) return false; // NXDOMAIN: domínio não existe
@@ -123,7 +155,9 @@ async function dominioRecebeEmail(email: string): Promise<boolean> {
 
 async function enviar(para: string, assunto: string, html: string, texto: string) {
   if (!(await dominioRecebeEmail(para))) {
-    throw new Error(`O domínio do e-mail "${para.split("@")[1] ?? ""}" não existe ou não recebe e-mails.`);
+    throw new Error(
+      `O domínio do e-mail "${para.split("@")[1] ?? ""}" não existe ou não recebe e-mails.`,
+    );
   }
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
@@ -145,7 +179,10 @@ async function enviar(para: string, assunto: string, html: string, texto: string
 
   const user = Deno.env.get("GMAIL_USER");
   const pass = Deno.env.get("GMAIL_APP_PASSWORD");
-  if (!user || !pass) throw new Error("Nenhum serviço de e-mail configurado (RESEND_API_KEY ou GMAIL_USER/GMAIL_APP_PASSWORD).");
+  if (!user || !pass)
+    throw new Error(
+      "Nenhum serviço de e-mail configurado (RESEND_API_KEY ou GMAIL_USER/GMAIL_APP_PASSWORD).",
+    );
 
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -153,7 +190,13 @@ async function enviar(para: string, assunto: string, html: string, texto: string
     secure: true,
     auth: { user, pass },
   });
-  await transporter.sendMail({ from: `SETEC <${user}>`, to: para, subject: assunto, html, text: texto });
+  await transporter.sendMail({
+    from: `SETEC <${user}>`,
+    to: para,
+    subject: assunto,
+    html,
+    text: texto,
+  });
 }
 
 Deno.serve(async (req) => {

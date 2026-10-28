@@ -34,6 +34,9 @@ export default tseslint.config(
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Tabelas criadas pelos scripts de supabase/sql ainda não estão nos tipos gerados
+      // (src/integrations/supabase/types.ts), então as consultas usam `as any`.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   eslintPluginPrettier,

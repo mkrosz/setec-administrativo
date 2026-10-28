@@ -14,7 +14,9 @@ import {
   type LinkType,
   type Minicurso,
   type Palestra,
-  type Palestrante, mensagemErro } from "@/lib/setec";
+  type Palestrante,
+  mensagemErro,
+} from "@/lib/setec";
 
 const label = "block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
 const pill = "field-pill h-10 w-full px-4 text-sm";
@@ -67,7 +69,15 @@ type PalestranteItem = {
 };
 
 function novoPalestrante(): PalestranteItem {
-  return { id: crypto.randomUUID(), nome: "", cargo: "", sobre: "", fotoPath: null, file: null, preview: "" };
+  return {
+    id: crypto.randomUUID(),
+    nome: "",
+    cargo: "",
+    sobre: "",
+    fotoPath: null,
+    file: null,
+    preview: "",
+  };
 }
 
 function palestranteVazio(p: PalestranteItem) {
@@ -132,7 +142,7 @@ export function PalestraModal({
         id: crypto.randomUUID(),
         type: l.type,
         url: l.url ?? "",
-      }))
+      })),
     );
 
     const pessoas = isMini
@@ -152,15 +162,17 @@ export function PalestraModal({
     setPalestrantes(itens.length ? itens : [novoPalestrante()]);
 
     let ativo = true;
-    Promise.all(itens.map(async (it) => [it.id, (await resolveUrl(it.fotoPath)) ?? ""] as const)).then(
-      (previews) => {
-        if (!ativo) return;
-        const mapa = new Map(previews);
-        setPalestrantes((prev) =>
-          prev.map((it) => (!it.file && it.fotoPath && mapa.get(it.id) ? { ...it, preview: mapa.get(it.id)! } : it)),
-        );
-      },
-    );
+    Promise.all(
+      itens.map(async (it) => [it.id, (await resolveUrl(it.fotoPath)) ?? ""] as const),
+    ).then((previews) => {
+      if (!ativo) return;
+      const mapa = new Map(previews);
+      setPalestrantes((prev) =>
+        prev.map((it) =>
+          !it.file && it.fotoPath && mapa.get(it.id) ? { ...it, preview: mapa.get(it.id)! } : it,
+        ),
+      );
+    });
     return () => {
       ativo = false;
     };
@@ -204,10 +216,7 @@ export function PalestraModal({
 
   function addLink() {
     // O LinkedIn é sempre o tipo padrão de um novo link
-    setLinks((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), type: "linkedin", url: "" },
-    ]);
+    setLinks((prev) => [...prev, { id: crypto.randomUUID(), type: "linkedin", url: "" }]);
   }
 
   function updateLink(id: string, patch: Partial<Omit<LinkItem, "id">>) {
@@ -218,7 +227,7 @@ export function PalestraModal({
     setLinks((prev) => prev.filter((l) => l.id !== id));
   }
 
-    function onSubmit(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     save(false);
   }
@@ -234,7 +243,8 @@ export function PalestraModal({
     setSaving(true);
     try {
       if (!asDraft) {
-        if (preenchidos.length === 0) throw new Error(`Adicione ao menos um ${t.pessoa.toLowerCase()}`);
+        if (preenchidos.length === 0)
+          throw new Error(`Adicione ao menos um ${t.pessoa.toLowerCase()}`);
         if (preenchidos.some((p) => !p.nome.trim())) {
           throw new Error(`Informe o nome de todos os ${t.pessoas.toLowerCase()}`);
         }
@@ -282,7 +292,8 @@ export function PalestraModal({
       const fimOk = horaOk(form.hora_fim);
 
       if (!asDraft) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(form.data)) throw new Error("Informe a data completa (DD/MM/AAAA)");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(form.data))
+          throw new Error("Informe a data completa (DD/MM/AAAA)");
         if (!dataOk) throw new Error("Essa data não existe. Confira o dia e o mês (DD/MM/AAAA)");
         if (!inicioOk || !fimOk) throw new Error("Informe horários válidos (HH:MM)");
       }
@@ -311,7 +322,10 @@ export function PalestraModal({
             ...comum,
             sobre_palestra: form.sobre_palestra || null,
             palestrantes: lista,
-            nome_completo: lista.map((p) => p.nome).filter(Boolean).join(", "),
+            nome_completo: lista
+              .map((p) => p.nome)
+              .filter(Boolean)
+              .join(", "),
             cargo: lista[0]?.cargo ?? null,
             sobre_palestrante: lista[0]?.sobre ?? null,
             foto_url: lista.flatMap((p) => (p.foto_url ? [p.foto_url] : [])),
@@ -319,16 +333,17 @@ export function PalestraModal({
 
       const tabela = (isMini ? "minicursos" : "palestras") as "palestras";
       const { error } = palestra
-        ? await supabase.from(tabela).update(payload as any).eq("id", palestra.id)
+        ? await supabase
+            .from(tabela)
+            .update(payload as any)
+            .eq("id", palestra.id)
         : await supabase.from(tabela).insert(payload as any);
 
       if (error) throw error;
 
       if (asDraft) {
         const incompleto =
-          (form.data && !dataOk) ||
-          (form.hora_inicio && !inicioOk) ||
-          (form.hora_fim && !fimOk);
+          (form.data && !dataOk) || (form.hora_inicio && !inicioOk) || (form.hora_fim && !fimOk);
         toast.success("Rascunho salvo");
         if (incompleto) toast.info("Data ou horário incompletos não foram guardados no rascunho");
       } else {
@@ -353,14 +368,18 @@ export function PalestraModal({
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(900px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[26px] border border-border/60 bg-card shadow-[0_40px_90px_-20px_rgba(0,0,0,0.85)]">
           <div className="px-5 pb-4 pt-5 sm:px-7">
             <Dialog.Title className="font-display text-2xl font-bold text-foreground">
-              {palestra?.rascunho ? "Editar rascunho" : palestra ? `Editar ${t.nome.toLowerCase()}` : `Adicionar ${t.nome.toLowerCase()}`}
+              {palestra?.rascunho
+                ? "Editar rascunho"
+                : palestra
+                  ? `Editar ${t.nome.toLowerCase()}`
+                  : `Adicionar ${t.nome.toLowerCase()}`}
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
               {palestra?.rascunho
                 ? "Complete as informações e publique, ou salve novamente como rascunho."
                 : palestra
-                ? "Ajuste os detalhes desta sessão do cronograma."
-                : "Preencha os detalhes da nova sessão para o cronograma."}
+                  ? "Ajuste os detalhes desta sessão do cronograma."
+                  : "Preencha os detalhes da nova sessão para o cronograma."}
             </Dialog.Description>
           </div>
           <div className="border-t border-border/60" />
@@ -452,7 +471,7 @@ export function PalestraModal({
                     let val = e.target.value.replace(/\D/g, "");
                     if (val.length > 2) val = val.slice(0, 2) + "/" + val.slice(2);
                     if (val.length > 5) val = val.slice(0, 5) + "/" + val.slice(5, 9);
-                    
+
                     if (val.length === 10) {
                       const parts = val.split("/");
                       set("data", `${parts[2]}-${parts[1]}-${parts[0]}`);
@@ -554,7 +573,11 @@ export function PalestraModal({
                           className="flex h-20 w-20 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-dashed border-border/70 bg-field text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
                         >
                           {p.preview ? (
-                            <img src={p.preview} alt={p.nome || "Palestrante"} className="h-full w-full object-cover" />
+                            <img
+                              src={p.preview}
+                              alt={p.nome || "Palestrante"}
+                              className="h-full w-full object-cover"
+                            />
                           ) : (
                             <>
                               <Camera className="h-5 w-5" />
@@ -626,7 +649,13 @@ export function PalestraModal({
                 Adicionar {t.pessoa.toLowerCase()}
               </button>
 
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
             </div>
 
             <div className="space-y-2">
@@ -707,7 +736,11 @@ export function PalestraModal({
               className="flex h-11 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full sm:flex-none bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {palestra?.rascunho ? "Publicar" : palestra ? "Salvar alterações" : `Salvar ${t.nome.toLowerCase()}`}
+              {palestra?.rascunho
+                ? "Publicar"
+                : palestra
+                  ? "Salvar alterações"
+                  : `Salvar ${t.nome.toLowerCase()}`}
             </button>
           </div>
         </Dialog.Content>

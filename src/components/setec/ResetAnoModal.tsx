@@ -34,7 +34,9 @@ type Props = {
 
 /** Conta as linhas de uma tabela; tabela inexistente (SQL não rodado) conta como 0. */
 async function contar(tabela: string) {
-  const { count, error } = await supabase.from(tabela as any).select("id", { count: "exact", head: true });
+  const { count, error } = await supabase
+    .from(tabela as any)
+    .select("id", { count: "exact", head: true });
   if (error) return 0;
   return count ?? 0;
 }
@@ -55,14 +57,15 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
     enabled: open,
     staleTime: 0,
     queryFn: async () => {
-      const [palestras, presencas, minicursos, inscricoes, apoiadores, comissao] = await Promise.all([
-        contar("palestras"),
-        contar("presencas"),
-        contar("minicursos"),
-        contar("minicurso_inscricoes"),
-        contar("patrocinadores"),
-        contar("comissao"),
-      ]);
+      const [palestras, presencas, minicursos, inscricoes, apoiadores, comissao] =
+        await Promise.all([
+          contar("palestras"),
+          contar("presencas"),
+          contar("minicursos"),
+          contar("minicurso_inscricoes"),
+          contar("patrocinadores"),
+          contar("comissao"),
+        ]);
       return { palestras, presencas, minicursos, inscricoes, apoiadores, comissao };
     },
   });
@@ -74,7 +77,9 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
       icone: Mic,
       titulo: "Palestras",
       total: t?.palestras,
-      detalhe: t ? `com ${plural(t.presencas, "presença", "presenças")} e QR Codes` : "com presenças e QR Codes",
+      detalhe: t
+        ? `com ${plural(t.presencas, "presença", "presenças")} e QR Codes`
+        : "com presenças e QR Codes",
     },
     {
       icone: GraduationCap,
@@ -137,7 +142,9 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
           </Dialog.Close>
 
           <AlertTriangle className="h-6 w-6 text-destructive" />
-          <Dialog.Title className="mt-3 font-display text-xl font-bold text-foreground">Resetar dados do ano</Dialog.Title>
+          <Dialog.Title className="mt-3 font-display text-xl font-bold text-foreground">
+            Resetar dados do ano
+          </Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
             Isto apaga permanentemente:
           </Dialog.Description>
@@ -148,7 +155,9 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
               <li key={it.titulo} className="flex items-center gap-3 py-2.5">
                 <it.icone className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="text-sm text-foreground">{it.titulo}</span>
-                {it.detalhe && <span className="truncate text-xs text-muted-foreground">{it.detalhe}</span>}
+                {it.detalhe && (
+                  <span className="truncate text-xs text-muted-foreground">{it.detalhe}</span>
+                )}
                 <span className="ml-auto font-display text-sm font-semibold tabular-nums text-destructive">
                   {totais.isLoading ? "…" : (it.total ?? 0)}
                 </span>
@@ -157,8 +166,8 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
           </ul>
 
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            Continuam salvos: informações do evento, turmas da presença e contas de acesso. As fotos e logos
-            ficam guardadas e são apagadas automaticamente após 12 meses sem uso.
+            Continuam salvos: informações do evento, turmas da presença e contas de acesso. As fotos
+            e logos ficam guardadas e são apagadas automaticamente após 12 meses sem uso.
           </p>
 
           {/* Confirmação digitada */}
@@ -188,7 +197,11 @@ export function ResetAnoModal({ open, onOpenChange }: Props) {
               disabled={!liberado || ocupado}
               className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-glow disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {ocupado && comBackupAtivo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {ocupado && comBackupAtivo ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               {ocupado && comBackupAtivo
                 ? etapa === "backup"
                   ? "Baixando backup..."

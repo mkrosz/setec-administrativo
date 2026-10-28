@@ -7,14 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { SetecLogo } from "@/components/setec/SetecLogo";
 import { useForceDarkTheme } from "@/hooks/use-theme";
 
-
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Redefinir senha | Painel SETEC" },
       {
         name: "description",
-        content: "Defina uma nova senha para acessar o painel administrativo da Semana de Tecnologia.",
+        content:
+          "Defina uma nova senha para acessar o painel administrativo da Semana de Tecnologia.",
       },
       { property: "og:title", content: "Redefinir senha | Painel SETEC" },
       { property: "og:description", content: "Nova senha de acesso ao painel SETEC." },
@@ -87,7 +87,11 @@ function ResetPassword() {
               aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             >
-              {mostrar ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+              {mostrar ? (
+                <EyeOff className="h-[18px] w-[18px]" />
+              ) : (
+                <Eye className="h-[18px] w-[18px]" />
+              )}
             </button>
           </div>
           <div className="relative">

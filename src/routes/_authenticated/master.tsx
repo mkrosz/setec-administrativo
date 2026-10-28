@@ -100,8 +100,9 @@ function MasterPage() {
           Master
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Veja quem fez o quê no painel e desfaça alterações, restaure os dados de antes de um reset ou
-          importação, congele o painel durante o evento e transfira a conta master na troca de gestão.
+          Veja quem fez o quê no painel e desfaça alterações, restaure os dados de antes de um reset
+          ou importação, congele o painel durante o evento e transfira a conta master na troca de
+          gestão.
         </p>
 
         <h2 className="mt-16 flex items-center gap-3 font-display text-xl font-bold">

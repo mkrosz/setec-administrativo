@@ -50,9 +50,19 @@ type Aba = "historico" | "restauracao" | "congelar" | "transferir";
 
 const ABAS: { valor: Aba; rotulo: string; detalhe: string; icone: typeof History }[] = [
   { valor: "historico", rotulo: "Histórico", detalhe: "Quem fez o quê", icone: History },
-  { valor: "restauracao", rotulo: "Restauração", detalhe: "Desfazer reset e importação", icone: RotateCcw },
+  {
+    valor: "restauracao",
+    rotulo: "Restauração",
+    detalhe: "Desfazer reset e importação",
+    icone: RotateCcw,
+  },
   { valor: "congelar", rotulo: "Congelar painel", detalhe: "Só visualização", icone: Snowflake },
-  { valor: "transferir", rotulo: "Transferir master", detalhe: "Troca de gestão", icone: ArrowRightLeft },
+  {
+    valor: "transferir",
+    rotulo: "Transferir master",
+    detalhe: "Troca de gestão",
+    icone: ArrowRightLeft,
+  },
 ];
 
 /** Funções exclusivas da conta master (página /master). */
@@ -82,19 +92,28 @@ export function MasterSection({ contas, congelado, confirmar }: Props) {
                 >
                   <span
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                      ativa ? "bg-primary/25 text-primary-glow" : "bg-secondary text-muted-foreground"
+                      ativa
+                        ? "bg-primary/25 text-primary-glow"
+                        : "bg-secondary text-muted-foreground"
                     }`}
                   >
                     <Icone className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
-                    <span className={`block text-sm ${ativa ? "text-foreground" : "text-muted-foreground"}`}>
+                    <span
+                      className={`block text-sm ${ativa ? "text-foreground" : "text-muted-foreground"}`}
+                    >
                       {rotulo}
                     </span>
-                    <span className="hidden text-[11px] text-muted-foreground lg:block">{detalhe}</span>
+                    <span className="hidden text-[11px] text-muted-foreground lg:block">
+                      {detalhe}
+                    </span>
                   </span>
                   {valor === "congelar" && congelado && (
-                    <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-sky-400" title="Painel congelado" />
+                    <span
+                      className="ml-auto h-2 w-2 shrink-0 rounded-full bg-sky-400"
+                      title="Painel congelado"
+                    />
                   )}
                 </button>
               );
@@ -219,9 +238,11 @@ function camposVisiveis(r: Registro, chaves: string[]) {
     .sort((a, b) => (ORDEM_CAMPO.get(a) ?? 99) - (ORDEM_CAMPO.get(b) ?? 99));
 }
 
-const vazio = (v: unknown) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
+const vazio = (v: unknown) =>
+  v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
 
-const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const hora = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 function rotuloDia(iso: string) {
   const d = new Date(iso);
@@ -344,7 +365,9 @@ type Pessoa = { nome?: string; cargo?: string | null; foto_url?: string | null }
 function Valor({ campo, valor }: { campo: string; valor: unknown }) {
   if (vazio(valor)) return <span className="text-xs italic text-muted-foreground">vazio</span>;
   if (IMAGENS.has(campo)) {
-    const lista = (Array.isArray(valor) ? valor : [valor]).filter((v): v is string => typeof v === "string" && !!v);
+    const lista = (Array.isArray(valor) ? valor : [valor]).filter(
+      (v): v is string => typeof v === "string" && !!v,
+    );
     return (
       <div className="flex flex-wrap gap-2">
         {lista.map((p) => (
@@ -370,7 +393,9 @@ function Valor({ campo, valor }: { campo: string; valor: unknown }) {
             />
             <span className="min-w-0">
               <span className="block truncate text-foreground">{p.nome || "Sem nome"}</span>
-              {p.cargo && <span className="block truncate text-xs text-muted-foreground">{p.cargo}</span>}
+              {p.cargo && (
+                <span className="block truncate text-xs text-muted-foreground">{p.cargo}</span>
+              )}
             </span>
           </li>
         ))}
@@ -399,7 +424,11 @@ function Valor({ campo, valor }: { campo: string; valor: unknown }) {
   }
   if (campo === "role") return <span>{valor === "admin" ? "Administrador" : "Usuário comum"}</span>;
   const texto = typeof valor === "string" ? valor : JSON.stringify(valor);
-  return <span className="block max-h-40 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere]">{texto}</span>;
+  return (
+    <span className="block max-h-40 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere]">
+      {texto}
+    </span>
+  );
 }
 
 /** Antes e depois lado a lado (alteração) ou o item como ficou (criação/exclusão). */
@@ -407,16 +436,24 @@ function Comparacao({ r }: { r: Registro }) {
   if (r.acao === "alterou") {
     const campos = camposVisiveis(r, r.campos ?? []);
     if (!campos.length) {
-      return <p className="text-xs text-muted-foreground">Só campos internos do sistema foram alterados.</p>;
+      return (
+        <p className="text-xs text-muted-foreground">
+          Só campos internos do sistema foram alterados.
+        </p>
+      );
     }
     // Cada linha é uma grade própria: as colunas usam minmax(0, …) para ficarem alinhadas em todas.
     // No celular o nome do campo vira uma faixa acima de "antes" e "depois".
     const colunas = "grid grid-cols-2 sm:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)]";
     return (
       <div className="overflow-hidden rounded-xl border border-border/50">
-        <div className={`${colunas} bg-background/40 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground`}>
+        <div
+          className={`${colunas} bg-background/40 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground`}
+        >
           <span className="hidden px-3 py-2 sm:block">Campo</span>
-          <span className="px-3 py-2 text-destructive/90 sm:border-l sm:border-border/40">Antes</span>
+          <span className="px-3 py-2 text-destructive/90 sm:border-l sm:border-border/40">
+            Antes
+          </span>
           <span className="border-l border-border/40 px-3 py-2 text-emerald-400">Depois</span>
         </div>
         {campos.map((c) => (
@@ -442,14 +479,21 @@ function Comparacao({ r }: { r: Registro }) {
     <div className="overflow-hidden rounded-xl border border-border/50">
       <p
         className={`px-3 py-2 text-[10px] font-medium uppercase tracking-[0.14em] ${
-          r.acao === "criou" ? "bg-emerald-500/[0.06] text-emerald-400" : "bg-destructive/[0.06] text-destructive/90"
+          r.acao === "criou"
+            ? "bg-emerald-500/[0.06] text-emerald-400"
+            : "bg-destructive/[0.06] text-destructive/90"
         }`}
       >
         {r.acao === "criou" ? "Como foi criado" : "Como estava antes de ser excluído"}
       </p>
       {campos.map((c) => (
-        <div key={c} className="grid grid-cols-[96px_minmax(0,1fr)] border-t border-border/40 text-sm sm:grid-cols-[140px_minmax(0,1fr)]">
-          <span className="break-words px-3 py-2.5 text-xs text-muted-foreground">{ROTULO_CAMPO.get(c)}</span>
+        <div
+          key={c}
+          className="grid grid-cols-[96px_minmax(0,1fr)] border-t border-border/40 text-sm sm:grid-cols-[140px_minmax(0,1fr)]"
+        >
+          <span className="break-words px-3 py-2.5 text-xs text-muted-foreground">
+            {ROTULO_CAMPO.get(c)}
+          </span>
           <div className="min-w-0 border-l border-border/40 px-3 py-2.5 text-foreground">
             <Valor campo={c} valor={linha[c]} />
           </div>
@@ -518,7 +562,8 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
     caixaRef.current?.scrollTo({ top: 0 });
     const antes = topoRodape.current;
     const depois = rodapeRef.current?.getBoundingClientRect().top;
-    if (antes != null && depois != null && Math.abs(depois - antes) > 1) window.scrollBy(0, depois - antes);
+    if (antes != null && depois != null && Math.abs(depois - antes) > 1)
+      window.scrollBy(0, depois - antes);
     if (!consulta.isPlaceholderData) topoRodape.current = null;
   }, [pagina, linhas, consulta.isPlaceholderData]);
 
@@ -556,8 +601,8 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
           <span className="block">{texto}</span>
           {(r.tabela === "palestras" || r.tabela === "minicursos") && r.acao !== "alterou" && (
             <span className="mt-2 block">
-              {r.tabela === "palestras" ? "Presenças e QR Codes" : "Inscrições"} ligados a ele aparecem como itens
-              separados no histórico e são desfeitos um a um.
+              {r.tabela === "palestras" ? "Presenças e QR Codes" : "Inscrições"} ligados a ele
+              aparecem como itens separados no histórico e são desfeitos um a um.
             </span>
           )}
         </>
@@ -583,10 +628,13 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
       descricao: (
         <>
           <span className="block">
-            Todos os registros do histórico são apagados de vez, inclusive os que estão fora dos filtros. Depois disso
-            não dá mais para ver nem desfazer essas alterações, e o histórico apagado não pode ser restaurado.
+            Todos os registros do histórico são apagados de vez, inclusive os que estão fora dos
+            filtros. Depois disso não dá mais para ver nem desfazer essas alterações, e o histórico
+            apagado não pode ser restaurado.
           </span>
-          <span className="mt-2 block">Fica só um registro dizendo que você apagou o histórico.</span>
+          <span className="mt-2 block">
+            Fica só um registro dizendo que você apagou o histórico.
+          </span>
         </>
       ),
       confirmar: "Apagar histórico",
@@ -618,7 +666,9 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
               }`}
             >
               <SlidersHorizontal className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">{ativos.length ? ativos.join(" • ") : "Todas as atividades"}</span>
+              <span className="truncate">
+                {ativos.length ? ativos.join(" • ") : "Todas as atividades"}
+              </span>
               {ativos.length > 0 && (
                 <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary/25 px-1.5 text-[11px] text-primary-glow">
                   {ativos.length}
@@ -698,7 +748,10 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
             </p>
             <ul className="divide-y divide-border/30">
               {registros.map((r) => {
-                const estilo = ESTILO_ACAO[r.acao] ?? { icone: History, cor: "bg-secondary text-muted-foreground" };
+                const estilo = ESTILO_ACAO[r.acao] ?? {
+                  icone: History,
+                  cor: "bg-secondary text-muted-foreground",
+                };
                 const Icone = estilo.icone;
                 const desfeito = !!r.desfeito_em;
                 const temDetalhe = !!r.tabela && (r.acao === "alterou" || !!(r.antes || r.depois));
@@ -712,20 +765,25 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
                         temDetalhe ? "hover:bg-secondary/40" : "cursor-default"
                       } ${desfeito ? "opacity-55" : ""}`}
                     >
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${estilo.cor}`}>
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${estilo.cor}`}
+                      >
                         <Icone className="h-4 w-4" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium text-foreground">{tituloRegistro(r)}</span>
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {tituloRegistro(r)}
+                          </span>
                           {desfeito && (
                             <span className="shrink-0 rounded-full border border-border/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                               desfeito
                             </span>
                           )}
-
                         </span>
-                        <span className="block truncate text-xs text-muted-foreground">{detalheRegistro(r)}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {detalheRegistro(r)}
+                        </span>
                       </span>
                       <time
                         dateTime={r.criado_em}
@@ -774,7 +832,9 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
         ))}
         {consulta.isSuccess && total === 0 && (
           <p className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
-            {ativos.length ? "Nenhuma atividade com esses filtros." : "Nenhuma atividade registrada."}
+            {ativos.length
+              ? "Nenhuma atividade com esses filtros."
+              : "Nenhuma atividade registrada."}
           </p>
         )}
         {consulta.isLoading && (
@@ -785,9 +845,13 @@ function Historico({ contas, confirmar }: { contas: Conta[]; confirmar: Props["c
         )}
       </div>
 
-      <div ref={rodapeRef} className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+      <div
+        ref={rodapeRef}
+        className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground"
+      >
         <span>
-          {total ? `${inicio}–${fim} de ${total} registros` : "Sem registros"} • clique em um item para ver o que mudou
+          {total ? `${inicio}–${fim} de ${total} registros` : "Sem registros"} • clique em um item
+          para ver o que mudou
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -827,7 +891,9 @@ function resumoTexto(r: PontoRestauracao["resumo"]) {
     [r.apoiadores, "apoiador", "apoiadores"],
     [r.comissao, "membro da comissão", "membros da comissão"],
   ];
-  const partes = itens.filter(([n]) => n > 0).map(([n, um, varios]) => `${n} ${n === 1 ? um : varios}`);
+  const partes = itens
+    .filter(([n]) => n > 0)
+    .map(([n, um, varios]) => `${n} ${n === 1 ? um : varios}`);
   return partes.length ? partes.join(" · ") : "sem dados";
 }
 
@@ -855,11 +921,12 @@ function Restauracao({ confirmar }: { confirmar: Props["confirmar"] }) {
       descricao: (
         <>
           <span className="block">
-            Os dados do ano voltam a ficar exatamente como estavam em <strong className="text-foreground">{data}</strong>{" "}
-            ({p.motivo.toLowerCase()}).
+            Os dados do ano voltam a ficar exatamente como estavam em{" "}
+            <strong className="text-foreground">{data}</strong> ({p.motivo.toLowerCase()}).
           </span>
           <span className="mt-2 block">
-            Antes, os dados atuais são guardados em um novo ponto de restauração, então dá para desfazer.
+            Antes, os dados atuais são guardados em um novo ponto de restauração, então dá para
+            desfazer.
           </span>
         </>
       ),
@@ -886,7 +953,10 @@ function Restauracao({ confirmar }: { confirmar: Props["confirmar"] }) {
       confirmar: "Apagar",
     });
     if (!ok) return;
-    const { error } = await supabase.from("pontos_restauracao" as any).delete().eq("id", p.id);
+    const { error } = await supabase
+      .from("pontos_restauracao" as any)
+      .delete()
+      .eq("id", p.id);
     if (error) {
       toast.error(mensagemErro(error));
       return;
@@ -899,8 +969,8 @@ function Restauracao({ confirmar }: { confirmar: Props["confirmar"] }) {
     <div>
       <p className="text-sm text-muted-foreground">
         Antes de cada <strong className="text-foreground">reset</strong> ou{" "}
-        <strong className="text-foreground">importação</strong>, o painel guarda uma cópia completa dos dados. Ficam
-        os 10 pontos mais recentes.
+        <strong className="text-foreground">importação</strong>, o painel guarda uma cópia completa
+        dos dados. Ficam os 10 pontos mais recentes.
       </p>
       <StatusConsulta consulta={pontos} nome="os pontos de restauração" />
       <ul className="mt-4 space-y-3">
@@ -918,22 +988,26 @@ function Restauracao({ confirmar }: { confirmar: Props["confirmar"] }) {
               <p className="mt-1 text-xs text-muted-foreground">{resumoTexto(p.resumo)}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => restaurar(p)}
-              disabled={restaurando !== null}
-              className="flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 text-sm text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-50 sm:flex-none"
-            >
-              {restaurando === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-              {restaurando === p.id ? "Restaurando…" : "Restaurar"}
-            </button>
-            <button
-              onClick={() => apagar(p)}
-              disabled={restaurando !== null}
-              aria-label="Apagar ponto de restauração"
-              className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+              <button
+                onClick={() => restaurar(p)}
+                disabled={restaurando !== null}
+                className="flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 text-sm text-primary-foreground transition-colors hover:bg-primary-glow disabled:opacity-50 sm:flex-none"
+              >
+                {restaurando === p.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+                {restaurando === p.id ? "Restaurando…" : "Restaurar"}
+              </button>
+              <button
+                onClick={() => apagar(p)}
+                disabled={restaurando !== null}
+                aria-label="Apagar ponto de restauração"
+                className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           </li>
         ))}
@@ -964,7 +1038,10 @@ function Congelar({ congelado, confirmar }: { congelado: boolean; confirmar: Pro
     });
     if (!ok) return;
     setSalvando(true);
-    const { error } = await supabase.rpc("definir_congelamento" as any, { _congelar: !congelado } as any);
+    const { error } = await supabase.rpc(
+      "definir_congelamento" as any,
+      { _congelar: !congelado } as any,
+    );
     setSalvando(false);
     if (error) {
       toast.error(mensagemErro(error));
@@ -984,7 +1061,9 @@ function Congelar({ congelado, confirmar }: { congelado: boolean; confirmar: Pro
         {congelado ? <Lock className="h-5 w-5" /> : <LockOpen className="h-5 w-5" />}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] text-foreground">{congelado ? "Painel congelado" : "Painel liberado para edição"}</p>
+        <p className="text-[15px] text-foreground">
+          {congelado ? "Painel congelado" : "Painel liberado para edição"}
+        </p>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {congelado
             ? "As outras contas só visualizam. Ideal durante a semana do evento."
@@ -1000,7 +1079,11 @@ function Congelar({ congelado, confirmar }: { congelado: boolean; confirmar: Pro
             : "bg-primary text-primary-foreground hover:bg-primary-glow"
         }`}
       >
-        {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Snowflake className="h-4 w-4" />}
+        {salvando ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Snowflake className="h-4 w-4" />
+        )}
         {congelado ? "Descongelar" : "Congelar painel"}
       </button>
     </div>
@@ -1024,8 +1107,9 @@ function Transferir({ contas, confirmar }: { contas: Conta[]; confirmar: Props["
       titulo: "Transferir conta master",
       descricao: (
         <>
-          <strong className="text-foreground">{destino}</strong> passa a ser a conta master. Sua conta continua como
-          administrador, mas perde as funções da master — só a nova master poderá devolvê-las.
+          <strong className="text-foreground">{destino}</strong> passa a ser a conta master. Sua
+          conta continua como administrador, mas perde as funções da master — só a nova master
+          poderá devolvê-las.
         </>
       ),
       confirmar: "Transferir",
@@ -1047,7 +1131,8 @@ function Transferir({ contas, confirmar }: { contas: Conta[]; confirmar: Props["
   return (
     <div className="max-w-xl">
       <p className="text-sm text-muted-foreground">
-        Use na troca de gestão da SETEC. A conta escolhida vira a master; a sua continua como administrador.
+        Use na troca de gestão da SETEC. A conta escolhida vira a master; a sua continua como
+        administrador.
       </p>
       <div className="mt-5 space-y-3">
         <Campo rotulo="Nova conta master">
@@ -1059,7 +1144,10 @@ function Transferir({ contas, confirmar }: { contas: Conta[]; confirmar: Props["
               setDestino(v);
               setDigitado("");
             }}
-            opcoes={[["", "Escolha uma conta liberada"], ...candidatas.map((c) => [c.email, c.email] as [string, string])]}
+            opcoes={[
+              ["", "Escolha uma conta liberada"],
+              ...candidatas.map((c) => [c.email, c.email] as [string, string]),
+            ]}
           />
         </Campo>
         {destino && (
@@ -1079,7 +1167,11 @@ function Transferir({ contas, confirmar }: { contas: Conta[]; confirmar: Props["
           disabled={!confere || salvando}
           className="flex h-10 items-center gap-2 rounded-full border border-destructive/60 px-5 text-sm text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-40"
         >
-          {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
+          {salvando ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ArrowRightLeft className="h-4 w-4" />
+          )}
           Transferir conta master
         </button>
       </div>

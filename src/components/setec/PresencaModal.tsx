@@ -26,7 +26,14 @@ type Props = {
 };
 
 /** Inclusão manual de um aluno (registra a localização de quem adiciona) ou correção de uma presença. */
-export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved, editando = null }: Props) {
+export function PresencaModal({
+  open,
+  onOpenChange,
+  palestra,
+  turmas,
+  onSaved,
+  editando = null,
+}: Props) {
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState("");
   const [ra, setRa] = useState("");
@@ -84,7 +91,9 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved, e
       setSaving(false);
       if (error) {
         toast.error(
-          error.code === "23505" ? "Este RA já está na lista desta palestra" : mensagemErro(error, "Erro ao salvar"),
+          error.code === "23505"
+            ? "Este RA já está na lista desta palestra"
+            : mensagemErro(error, "Erro ao salvar"),
         );
         return;
       }
@@ -185,9 +194,12 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved, e
 
             {editando ? (
               <p className="rounded-2xl border border-border/60 bg-field/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                Registrado em <strong className="text-foreground">{formatDataHora(editando.registrado_em)}</strong>
-                {editando.origem === "manual" ? " (manual)" : " pelo QR Code"}. O horário, a localização e a origem do
-                registro continuam os mesmos.
+                Registrado em{" "}
+                <strong className="text-foreground">
+                  {formatDataHora(editando.registrado_em)}
+                </strong>
+                {editando.origem === "manual" ? " (manual)" : " pelo QR Code"}. O horário, a
+                localização e a origem do registro continuam os mesmos.
               </p>
             ) : (
               <LocalStatus estado={local} onRetry={buscarLocal} />
@@ -200,14 +212,14 @@ export function PresencaModal({ open, onOpenChange, palestra, turmas, onSaved, e
               Cancelar
             </Dialog.Close>
             {!editando && (
-            <button
-              type="button"
-              onClick={() => save(true)}
-              disabled={saving}
-              className="flex h-11 flex-auto items-center justify-center whitespace-nowrap rounded-full sm:flex-none border border-border/70 px-6 text-sm font-medium text-foreground transition-colors hover:border-primary/60 disabled:opacity-60"
-            >
-              Salvar e adicionar outro
-            </button>
+              <button
+                type="button"
+                onClick={() => save(true)}
+                disabled={saving}
+                className="flex h-11 flex-auto items-center justify-center whitespace-nowrap rounded-full sm:flex-none border border-border/70 px-6 text-sm font-medium text-foreground transition-colors hover:border-primary/60 disabled:opacity-60"
+              >
+                Salvar e adicionar outro
+              </button>
             )}
             <button
               type="submit"

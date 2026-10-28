@@ -387,8 +387,8 @@ function PresencaPage() {
       titulo: "Remover presença",
       descricao: (
         <>
-          <strong className="text-foreground">{p.nome_completo}</strong> (RA {p.ra}) sai da lista de presença desta
-          palestra.
+          <strong className="text-foreground">{p.nome_completo}</strong> (RA {p.ra}) sai da lista de
+          presença desta palestra.
         </>
       ),
       confirmar: "Remover",
@@ -775,24 +775,24 @@ function PresencaPage() {
                           </td>
                           <td className="px-2 py-3">
                             <div className="flex items-center justify-end gap-0.5 acoes-hover">
-                            <button
-                              aria-label={`Editar ${p.nome_completo}`}
-                              title="Corrigir nome, RA ou turma"
-                              onClick={() => {
-                                setPresencaEdit(p);
-                                setManualOpen(true);
-                              }}
-                              className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              aria-label="Remover presença"
-                              onClick={() => removerPresenca(p)}
-                              className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                              <button
+                                aria-label={`Editar ${p.nome_completo}`}
+                                title="Corrigir nome, RA ou turma"
+                                onClick={() => {
+                                  setPresencaEdit(p);
+                                  setManualOpen(true);
+                                }}
+                                className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                aria-label="Remover presença"
+                                onClick={() => removerPresenca(p)}
+                                className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -896,7 +896,9 @@ function ProjecaoQr({
           {palestra.titulo}
         </h2>
         <p className="mt-3 text-[clamp(0.85rem,1.3vw,1.25rem)] text-white/70">
-          {[horario(palestra), palestra.local, nomesPalestrantes(palestra)].filter(Boolean).join(" • ")}
+          {[horario(palestra), palestra.local, nomesPalestrantes(palestra)]
+            .filter(Boolean)
+            .join(" • ")}
         </p>
         <p className="mt-[5vh] font-display text-[clamp(2.5rem,6vw,6.5rem)] font-bold leading-none tabular-nums">
           {restante}
