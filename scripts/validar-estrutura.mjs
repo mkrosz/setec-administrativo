@@ -15,6 +15,14 @@ const obrigatorios = [
   "src/routes/__root.tsx",
   "supabase/migrations",
   ".github/pull_request_template.md",
+  ".dockerignore",
+  "docker-compose.yml",
+  "docker/backend/Dockerfile",
+  "docker/frontend/Dockerfile",
+  "docker/frontend/nginx.conf.template",
+  "scripts/docker/deploy.sh",
+  "scripts/docker/verify.sh",
+  "docs/DEPLOY-DOCKER.md",
 ];
 
 const erros = obrigatorios.filter((p) => !existsSync(p)).map((p) => `Arquivo ausente: ${p}`);

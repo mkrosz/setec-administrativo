@@ -1,0 +1,65 @@
+# Gerado a partir do template pelo entrypoint do Nginx (envsubst).
+# Variáveis: ${BACKEND_HOST} (host:porta do back-end), ${APP_VERSION}
+
+upstream setec_backend {
+    server ${BACKEND_HOST};
+    keepalive 16;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    client_max_body_size 20m;
+
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript application/json image/svg+xml text/plain;
+
+    add_header X-App-Version "${APP_VERSION}" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    # Saúde do próprio Nginx (usado no HEALTHCHECK e na verificação pós-deploy)
+    location = /healthz {
+        access_log off;
+        default_type application/json;
+        return 200 '{"status":"ok","service":"frontend","version":"${APP_VERSION}"}';
+    }
+
+    # Versão publicada (arquivo gerado no build do back-end)
+    location = /version.json {
+        add_header Cache-Control "no-store" always;
+        add_header X-App-Version "${APP_VERSION}" always;
+        try_files $uri =404;
+    }
+
+    # Arquivos do build com hash no nome: cache longo
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header X-App-Version "${APP_VERSION}" always;
+        try_files $uri =404;
+    }
+
+    # Imagens hospedadas pela Lovable (opcional, ver 15-lovable-assets.sh)
+    include /etc/nginx/conf.d/lovable-assets.inc;
+
+    # Demais estáticos (favicon, robots.txt...) ou, se não existir, o back-end
+    location / {
+        try_files $uri @backend;
+    }
+
+    location @backend {
+        proxy_pass http://setec_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

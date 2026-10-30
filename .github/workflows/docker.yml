@@ -1,0 +1,155 @@
+name: Docker
+
+# Construção automatizada das imagens, teste dos contêineres e implantação.
+#
+# - Pull Request: constrói as imagens e roda a verificação (não publica).
+# - Push na main / tag v*: constrói, verifica e publica no GitHub Container Registry.
+# - Implantação no servidor: roda após a publicação quando a variável de repositório
+#   DEPLOY_ENABLED = true (Settings > Secrets and variables > Actions > Variables).
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build-teste:
+    name: Build, teste e publicação das imagens
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.versao.outputs.version }}
+      prefix: ${{ steps.versao.outputs.prefix }}
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Identificar a versão
+        id: versao
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          SHA=$(git rev-parse --short HEAD)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${PKG}-${SHA}"
+          fi
+          PREFIX=$(echo "$IMAGE_BASE" | tr '[:upper:]' '[:lower:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "Versão: $VERSION"
+
+      - name: Preparar Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Sem os secrets (ex.: PR de fork), usa valores fictícios: o build e o SSR
+      # funcionam do mesmo jeito, só o acesso ao Supabase não.
+      - name: Criar .env para o teste
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          URL="${VITE_SUPABASE_URL:-https://exemplo.supabase.co}"
+          KEY="${VITE_SUPABASE_PUBLISHABLE_KEY:-chave-ci}"
+          cat > .env <<EOF
+          VITE_SUPABASE_URL=$URL
+          VITE_SUPABASE_PUBLISHABLE_KEY=$KEY
+          SUPABASE_URL=$URL
+          SUPABASE_PUBLISHABLE_KEY=$KEY
+          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-chave-ci}
+          HTTP_PORT=8080
+          IMAGE_PREFIX=${{ steps.versao.outputs.prefix }}
+          EOF
+
+      - name: Construir as imagens
+        env:
+          APP_VERSION: ${{ steps.versao.outputs.version }}
+          GIT_COMMIT: ${{ steps.versao.outputs.sha }}
+        run: |
+          export BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          docker compose build
+
+      - name: Subir os contêineres
+        env:
+          APP_VERSION: ${{ steps.versao.outputs.version }}
+        run: docker compose up -d
+
+      - name: Verificação pós-deploy
+        env:
+          APP_VERSION: ${{ steps.versao.outputs.version }}
+        run: bash scripts/docker/verify.sh "$APP_VERSION"
+
+      - name: Logs dos contêineres (em caso de falha)
+        if: failure()
+        run: docker compose logs
+
+      - name: Login no GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar as imagens (versão + latest)
+        if: github.event_name != 'pull_request'
+        env:
+          VERSION: ${{ steps.versao.outputs.version }}
+          PREFIX: ${{ steps.versao.outputs.prefix }}
+        run: |
+          for svc in backend frontend; do
+            docker tag "$PREFIX-$svc:$VERSION" "$PREFIX-$svc:latest"
+            docker push "$PREFIX-$svc:$VERSION"
+            docker push "$PREFIX-$svc:latest"
+          done
+          {
+            echo "### Imagens publicadas"
+            echo "- \`$PREFIX-backend:$VERSION\`"
+            echo "- \`$PREFIX-frontend:$VERSION\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Implantação no servidor
+    needs: build-teste
+    if: github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: producao
+    steps:
+      # No servidor: pasta DEPLOY_PATH com docker-compose.yml, .env e scripts/docker.
+      - name: Atualizar contêineres via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_VERSION: ${{ needs.build-teste.outputs.version }}
+          IMAGE_PREFIX: ${{ needs.build-teste.outputs.prefix }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: APP_VERSION,IMAGE_PREFIX
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git pull --ff-only
+            export APP_VERSION IMAGE_PREFIX
+            docker compose pull
+            docker compose up -d --no-build --remove-orphans
+            bash scripts/docker/verify.sh "$APP_VERSION"
+            mkdir -p .deploy && echo "$APP_VERSION" > .deploy/current-version

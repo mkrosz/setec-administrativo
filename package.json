@@ -1,5 +1,6 @@
 {
   "name": "tanstack_start_ts",
+  "version": "1.0.0",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -12,7 +13,13 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "node scripts/validar-estrutura.mjs"
+    "validate": "node scripts/validar-estrutura.mjs",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:deploy": "bash scripts/docker/deploy.sh",
+    "docker:verify": "bash scripts/docker/verify.sh"
   },
   "overrides": {
     "rolldown": "1.2.1",
