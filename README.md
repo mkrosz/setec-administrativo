@@ -29,6 +29,7 @@ banco **Supabase**.
 - [Execução](#execução)
 - [Testes e qualidade](#testes-e-qualidade)
 - [Deploy](#deploy)
+- [Docker](#docker)
 - [Processo de desenvolvimento](#processo-de-desenvolvimento)
 - [Solução de problemas](#solução-de-problemas)
 - [Segurança](#segurança)
@@ -409,6 +410,25 @@ Checklist de publicação:
 2. Variáveis de ambiente configuradas no ambiente de produção.
 3. SQL novo rodado no Supabase **antes** de publicar o código que depende dele.
 4. Edge Functions alteradas publicadas com `supabase functions deploy`.
+
+## Docker
+
+A aplicação também roda em contêineres, com dois serviços: `backend` (servidor
+TanStack Start em Node.js) e `frontend` (Nginx na frente, servindo os estáticos
+e repassando o resto ao backend). O banco continua no Supabase.
+
+```bash
+cp .env.example .env            # preencha as chaves do Supabase
+scripts/docker/deploy.sh        # build + subida + verificação (ou deploy.ps1 no Windows)
+```
+
+O site fica em `http://localhost:8080` e a versão publicada em `/version.json`.
+O workflow [`.github/workflows/docker.yml`](.github/workflows/docker.yml) constrói
+e testa as imagens em todo PR e as publica no GitHub Container Registry a cada
+push na `main`.
+
+Tudo sobre portas, variáveis, build manual, verificação pós-deploy, rollback e
+roteiro de demonstração está em [docs/DEPLOY-DOCKER.md](docs/DEPLOY-DOCKER.md).
 
 ## Processo de desenvolvimento
 

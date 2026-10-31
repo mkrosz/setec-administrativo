@@ -1,0 +1,73 @@
+# Orquestração dos contêineres do SETEC Administrativo.
+#
+#   frontend (Nginx, porta HTTP_PORT do host)  ->  backend (Node SSR, porta 3000 interna)  ->  Supabase (nuvem)
+#
+# Uso rápido:
+#   cp .env.example .env      # preencha as chaves do Supabase
+#   docker compose up -d --build
+#   abra http://localhost:8080
+#
+# Para deploy com versão, verificação e rollback, use scripts/docker/deploy.sh (ou .ps1).
+
+name: setec
+
+x-build-args: &build-args
+  APP_VERSION: ${APP_VERSION:-dev}
+  GIT_COMMIT: ${GIT_COMMIT:-unknown}
+  BUILD_DATE: ${BUILD_DATE:-unknown}
+
+services:
+  backend:
+    image: ${IMAGE_PREFIX:-setec}-backend:${APP_VERSION:-dev}
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        <<: *build-args
+        VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID:-}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?defina VITE_SUPABASE_URL no .env}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:?defina VITE_SUPABASE_PUBLISHABLE_KEY no .env}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      SUPABASE_PROJECT_ID: ${SUPABASE_PROJECT_ID:-}
+      SUPABASE_URL: ${SUPABASE_URL:?defina SUPABASE_URL no .env}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?defina SUPABASE_PUBLISHABLE_KEY no .env}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?defina SUPABASE_SERVICE_ROLE_KEY no .env}
+      LOVABLE_CRON_SECRET: ${LOVABLE_CRON_SECRET:-}
+    # Sem porta publicada: só o frontend fala com o backend, pela rede interna.
+    expose:
+      - "3000"
+    networks:
+      - interna
+    # Para acessar o backend direto durante testes, descomente:
+    # ports:
+    #   - "${APP_PORT:-3000}:3000"
+
+  frontend:
+    image: ${IMAGE_PREFIX:-setec}-frontend:${APP_VERSION:-dev}
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      additional_contexts:
+        backend: service:backend
+      args:
+        <<: *build-args
+    restart: unless-stopped
+    environment:
+      APP_VERSION: ${APP_VERSION:-dev}
+      BACKEND_HOST: backend:3000
+      LOVABLE_ASSETS_ORIGIN: ${LOVABLE_ASSETS_ORIGIN:-}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - interna
+
+networks:
+  interna:
+    driver: bridge

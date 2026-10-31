@@ -42,3 +42,7 @@ supabase/.branches/
 
 # Configuração local do Claude Code
 .claude/launch.json
+
+# Gerados pelo deploy Docker
+public/version.json
+.deploy/

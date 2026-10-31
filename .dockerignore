@@ -1,0 +1,28 @@
+# Mantém o contexto de build pequeno e sem segredos
+.git
+.github
+node_modules
+.output
+dist
+dist-ssr
+.nitro
+.tanstack
+.vinxi
+.wrangler
+*.log
+
+# Variáveis de ambiente nunca entram na imagem (VITE_* vão como build args)
+.env
+.env.*
+!.env.example
+
+# Arquivos que não fazem parte do build
+docker-compose*.yml
+docs
+supabase
+scripts/docker
+bun.lock
+package-lock.json
+.vscode
+.idea
+.claude
