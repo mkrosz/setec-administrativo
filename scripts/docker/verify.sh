@@ -57,7 +57,7 @@ for rota in / /checkin/verificacao-deploy; do
 done
 
 # 5. Estático do build servido pelo Nginx
-asset=$(curl -s "$BASE_URL/" | grep -o '/assets/[^"]*\.js' | head -1)
+asset=$(curl -s "$BASE_URL/" | grep -a -o '/assets/[^"]*\.js' | head -1)
 if [ -n "$asset" ]; then
   cache=$(curl -s -D - -o /dev/null "$BASE_URL$asset" | tr -d '\r' | grep -i '^cache-control' || true)
   code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL$asset")
