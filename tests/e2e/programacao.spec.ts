@@ -44,3 +44,26 @@ test.describe("Programação - palestras", () => {
     await remover(page, titulo, "palestra");
   });
 });
+
+test.describe("Programação - edição", () => {
+  test("087 - editar e excluir uma palestra", async ({ page }) => {
+    const titulo = tituloUnico("Palestra para editar");
+    const novoTitulo = `${titulo} (editada)`;
+    await entrar(page, contaAdmin);
+
+    await page.getByText("Adicionar palestra").click();
+    await page.getByPlaceholder("O Futuro da IA no Design").fill(titulo);
+    await page.getByRole("button", { name: "Salvar como rascunho" }).click();
+    await abrirRascunhos(page);
+
+    const item = linha(page, titulo);
+    await item.hover();
+    await item.getByRole("button", { name: "Editar palestra" }).click();
+    await page.getByPlaceholder("O Futuro da IA no Design").fill(novoTitulo);
+    await page.getByRole("button", { name: "Salvar rascunho" }).click();
+    await expect(page.getByText("Rascunho salvo").last()).toBeVisible();
+
+    await expect(linha(page, novoTitulo)).toBeVisible();
+    await remover(page, novoTitulo, "palestra");
+  });
+});
