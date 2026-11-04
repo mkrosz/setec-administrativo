@@ -12,7 +12,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: { storage: { from: storage.from } },
 }));
 
-import { BUCKET, uploadFile } from "@/lib/setec";
+import { BUCKET, resolveUrl, uploadFile } from "@/lib/setec";
 
 beforeEach(() => {
   storage.from.mockReturnValue({
@@ -48,5 +48,15 @@ describe("uploadFile - falha no Storage", () => {
     const arquivo = new File(["x"], "grande.jpg", { type: "image/jpeg" });
 
     await expect(uploadFile(arquivo, "apoiadores")).rejects.toBe(erro);
+  });
+});
+
+describe("resolveUrl - URL completa", () => {
+  it("071 - devolve a URL igual quando ela já começa com http(s), sem consultar o Storage", async () => {
+    const url = "https://cdn.exemplo.com/logo.png";
+
+    await expect(resolveUrl(url)).resolves.toBe(url);
+    await expect(resolveUrl("http://site.com/a.jpg")).resolves.toBe("http://site.com/a.jpg");
+    expect(storage.from).not.toHaveBeenCalled();
   });
 });
