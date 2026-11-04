@@ -40,3 +40,13 @@ describe("uploadFile (Supabase Storage)", () => {
     expect(outro).not.toBe(caminho);
   });
 });
+
+describe("uploadFile - falha no Storage", () => {
+  it("070 - repassa o erro do Storage para quem chamou (a tela mostra a mensagem)", async () => {
+    const erro = { message: "Payload too large", statusCode: "413" };
+    storage.upload.mockResolvedValue({ data: null, error: erro });
+    const arquivo = new File(["x"], "grande.jpg", { type: "image/jpeg" });
+
+    await expect(uploadFile(arquivo, "apoiadores")).rejects.toBe(erro);
+  });
+});
