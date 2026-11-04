@@ -67,3 +67,25 @@ test.describe("Programação - edição", () => {
     await remover(page, novoTitulo, "palestra");
   });
 });
+
+test.describe("Programação - minicursos", () => {
+  test("088 - criar um minicurso com número de vagas", async ({ page }) => {
+    const titulo = tituloUnico("Minicurso criado");
+    await entrar(page, contaAdmin);
+
+    await page.getByRole("tab", { name: /Minicursos/ }).click();
+    await page.getByText("Adicionar minicurso").click();
+    await page.getByPlaceholder("Criando APIs com Node.js").fill(titulo);
+    await page.getByPlaceholder("30").fill("5");
+    await page.getByRole("button", { name: "Salvar como rascunho" }).click();
+    await expect(page.getByText("Rascunho salvo")).toBeVisible();
+
+    await abrirRascunhos(page);
+    const item = linha(page, titulo);
+    await expect(item).toBeVisible();
+    // Nenhum inscrito ainda: contador "0/5"
+    await expect(item.getByText("0/5")).toBeVisible();
+
+    await remover(page, titulo, "minicurso");
+  });
+});
