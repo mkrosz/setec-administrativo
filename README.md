@@ -351,14 +351,44 @@ Para validar o ambiente:
 
 ## Testes e qualidade
 
-O projeto ainda **não tem testes automatizados**. Antes de abrir um Pull Request,
-rode as mesmas verificações do CI:
+### Testes automatizados
+
+| Tipo       | Ferramenta | Pasta               | Comando         |
+| ---------- | ---------- | ------------------- | --------------- |
+| Integração | Vitest     | `tests/integracao/` | `pnpm test`     |
+| E2E        | Playwright | `tests/e2e/`        | `pnpm test:e2e` |
+
+Os testes de integração simulam o cliente do Supabase (Storage e Edge Functions),
+então rodam sem rede e sem chaves, inclusive no CI. Os E2E abrem o painel num
+navegador de verdade (sobem o `pnpm dev` sozinhos) e precisam de contas **de
+teste** no Supabase, configuradas no `.env`:
+
+| Variável                                 | Para quê                                                         |
+| ---------------------------------------- | ---------------------------------------------------------------- |
+| `E2E_EMAIL` / `E2E_PASSWORD`             | Conta administradora (login, logout e programação)               |
+| `E2E_COMUM_EMAIL` / `E2E_COMUM_PASSWORD` | Conta com nível "Usuário comum" (permissões)                     |
+| `E2E_PERMITIR_ESCRITA=1`                 | Libera os testes que criam e apagam palestras e minicursos       |
+| `E2E_BASE_URL`                           | Testar outro endereço (ex.: o Docker em `http://localhost:8080`) |
+
+Sem essas variáveis, os E2E correspondentes são pulados. Os registros criados
+pelos testes começam com `[E2E]` e são apagados no fim de cada teste; use um
+projeto Supabase de teste para não mexer nos dados do evento.
+
+```bash
+npx playwright install chromium   # só na primeira vez
+pnpm test:e2e
+```
+
+### Verificações antes do Pull Request
+
+Antes de abrir um Pull Request, rode as mesmas verificações do CI:
 
 ```bash
 pnpm validate       # estrutura do repositório e nenhum .env versionado
 pnpm format:check   # formatação (Prettier)
 pnpm lint           # ESLint
 pnpm typecheck      # TypeScript
+pnpm test           # testes de integração
 pnpm build
 ```
 
@@ -391,8 +421,7 @@ Roteiro de teste manual:
 5. Com um usuário comum, confirmar que Presença e Controle de Acessos não aparecem.
 6. Exportar um backup, alterar algo e restaurar pelo ponto de restauração.
 
-Sugestão de evolução: testes unitários (Vitest) para `src/lib` e testes E2E
-(Playwright) para os fluxos de login, inscrição e presença.
+Os itens 1, 2, 3 (cadastro) e 5 já têm versão automatizada em `tests/e2e/`.
 
 ## Deploy
 

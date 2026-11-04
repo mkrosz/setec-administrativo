@@ -46,3 +46,7 @@ supabase/.branches/
 # Gerados pelo deploy Docker
 public/version.json
 .deploy/
+
+# Relatórios dos testes (Playwright)
+playwright-report/
+test-results/
