@@ -33,6 +33,8 @@ export function tituloUnico(nome: string) {
 /** Faz login pela tela inicial e espera o painel abrir. */
 export async function entrar(page: Page, conta: { email: string; senha: string }) {
   await page.goto("/");
+  // A página chega pronta do servidor (SSR): espera o React assumir o formulário.
+  await page.waitForLoadState("networkidle");
   await page.getByLabel("E-mail").fill(conta.email);
   await page.getByLabel("Senha", { exact: true }).fill(conta.senha);
   await page.getByRole("button", { name: "Entrar no painel" }).click();
