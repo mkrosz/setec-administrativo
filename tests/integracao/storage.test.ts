@@ -76,3 +76,12 @@ describe("resolveUrl - caminho do bucket", () => {
     );
   });
 });
+
+describe("resolveUrl - sem imagem", () => {
+  it("073 - devolve null para valor vazio, nulo ou indefinido", async () => {
+    await expect(resolveUrl("")).resolves.toBeNull();
+    await expect(resolveUrl(null)).resolves.toBeNull();
+    await expect(resolveUrl(undefined)).resolves.toBeNull();
+    expect(storage.from).not.toHaveBeenCalled();
+  });
+});
