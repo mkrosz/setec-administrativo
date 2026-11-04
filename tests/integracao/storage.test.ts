@@ -60,3 +60,19 @@ describe("resolveUrl - URL completa", () => {
     expect(storage.from).not.toHaveBeenCalled();
   });
 });
+
+describe("resolveUrl - caminho do bucket", () => {
+  it("072 - transforma o caminho salvo no banco na URL pública do Supabase", async () => {
+    const publica = "https://projeto.supabase.co/storage/v1/object/public/setec-bucket/logos/a.png";
+    storage.getPublicUrl.mockReturnValue({ data: { publicUrl: publica } });
+
+    await expect(resolveUrl("/logos/a.png")).resolves.toBe(publica);
+    expect(storage.from).toHaveBeenCalledWith(BUCKET);
+    expect(storage.getPublicUrl).toHaveBeenCalledWith("logos/a.png");
+
+    vi.stubEnv("VITE_SUPABASE_URL", "https://projeto.supabase.co");
+    await expect(resolveUrl("storage/v1/object/public/setec-bucket/b.png")).resolves.toBe(
+      "https://projeto.supabase.co/storage/v1/object/public/setec-bucket/b.png",
+    );
+  });
+});
