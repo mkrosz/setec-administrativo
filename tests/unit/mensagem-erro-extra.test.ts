@@ -34,7 +34,9 @@ describe("mensagemErro - demais traduções", () => {
 
   it("068 - timeout e JSON inválido", () => {
     expect(mensagemErro({ message: "Request timed out" })).toMatch(/demorou/i);
-    expect(mensagemErro({ message: "Unexpected token < in JSON" })).toMatch(/Não foi possível ler/i);
+    expect(mensagemErro({ message: "Unexpected token < in JSON" })).toMatch(
+      /Não foi possível ler/i,
+    );
   });
 
   it("076 - usa só o code quando message vazia e code casa com tradução", () => {

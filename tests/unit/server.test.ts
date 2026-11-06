@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { normalizarCaminho, registrarRequisicao, resetMetricasParaTestes, snapshotMetricas, statusSaude } from "@/lib/observabilidade";
+import {
+  normalizarCaminho,
+  registrarRequisicao,
+  resetMetricasParaTestes,
+  snapshotMetricas,
+  statusSaude,
+} from "@/lib/observabilidade";
 
 describe("server.ts - observabilidade integrada", () => {
   beforeEach(() => {
