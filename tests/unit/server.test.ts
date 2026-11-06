@@ -62,6 +62,6 @@ describe("server.ts - observabilidade integrada", () => {
     const longo = "/a".repeat(200);
     const normalizado = normalizarCaminho(`https://app.test${longo}`);
     expect(normalizado.length).toBeLessThanOrEqual(120);
-    expect(normalizado).toMatch(/^\/a+\.\.\.$/);
+    expect(normalizado).toMatch(/^\/a\/a\/.*\.\.\.$/);
   });
 });

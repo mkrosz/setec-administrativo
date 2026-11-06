@@ -46,12 +46,10 @@ describe("consumeLastCapturedError", () => {
   });
 
   it("040 - captura via console.error e consome uma vez", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const err = new Error("capturado");
     console.error(err);
     const primeiro = consumeLastCapturedError();
     expect(primeiro).toBe(err);
     expect(consumeLastCapturedError()).toBeUndefined();
-    spy.mockRestore();
   });
 });

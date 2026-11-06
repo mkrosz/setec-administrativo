@@ -30,7 +30,7 @@ describe("normalizarCaminho", () => {
   });
 
   it("057 - caminho inválido vira /", () => {
-    expect(normalizarCaminho(":::")).toBe("/");
+    expect(normalizarCaminho("not-a-url")).toBe("/");
   });
 });
 
