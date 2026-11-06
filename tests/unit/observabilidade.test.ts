@@ -26,9 +26,7 @@ describe("normalizarCaminho", () => {
   });
 
   it("056 - substitui UUID por :id", () => {
-    expect(
-      normalizarCaminho("/checkin/550e8400-e29b-41d4-a716-446655440000"),
-    ).toBe("/checkin/:id");
+    expect(normalizarCaminho("/checkin/550e8400-e29b-41d4-a716-446655440000")).toBe("/checkin/:id");
   });
 
   it("057 - caminho inválido vira /", () => {

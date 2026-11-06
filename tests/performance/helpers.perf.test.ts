@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { sugerirEmail } from "@/lib/email";
 import { describeError } from "@/lib/error-capture";
+import { compararTurmas, mensagemErro, normalizeUrl, palestrantesDe } from "@/lib/setec";
 import {
-  compararTurmas,
-  mensagemErro,
-  normalizeUrl,
-  palestrantesDe,
-} from "@/lib/setec";
-import { normalizarCaminho, registrarRequisicao, resetMetricasParaTestes } from "@/lib/observabilidade";
+  normalizarCaminho,
+  registrarRequisicao,
+  resetMetricasParaTestes,
+} from "@/lib/observabilidade";
 
 /**
  * Orçamentos leves de performance (CPU local). Não substituem load test externo;

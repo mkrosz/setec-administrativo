@@ -50,10 +50,7 @@ export function normalizarCaminho(url: string): string {
     const u = new URL(url, "http://localhost");
     let path = u.pathname || "/";
     // Tokens/UUID viram placeholder para agrupar métricas.
-    path = path.replace(
-      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
-      ":id",
-    );
+    path = path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id");
     if (path.length > 120) path = `${path.slice(0, 117)}...`;
     return path;
   } catch {
@@ -87,17 +84,9 @@ export function logEvento(
   return evento;
 }
 
-export function logErro(
-  tipo: string,
-  erro: unknown,
-  dados?: Record<string, unknown>,
-): EventoLog {
+export function logErro(tipo: string, erro: unknown, dados?: Record<string, unknown>): EventoLog {
   const mensagem =
-    erro instanceof Error
-      ? erro.message
-      : typeof erro === "string"
-        ? erro
-        : "erro desconhecido";
+    erro instanceof Error ? erro.message : typeof erro === "string" ? erro : "erro desconhecido";
   return logEvento("error", tipo, mensagem, {
     ...dados,
     nome: erro instanceof Error ? erro.name : undefined,
@@ -134,8 +123,7 @@ export function snapshotMetricas() {
       rota,
       requisicoes: a.requisicoes,
       erros: a.erros,
-      duracao_media_ms:
-        a.requisicoes > 0 ? Math.round(a.duracaoTotalMs / a.requisicoes) : 0,
+      duracao_media_ms: a.requisicoes > 0 ? Math.round(a.duracaoTotalMs / a.requisicoes) : 0,
       duracao_max_ms: a.duracaoMaxMs,
     }))
     .sort((a, b) => b.requisicoes - a.requisicoes);
@@ -145,12 +133,8 @@ export function snapshotMetricas() {
     uptime_s: Math.round((Date.now() - inicioProcesso) / 1000),
     requisicoes: totalRequisicoes,
     erros: totalErros,
-    taxa_erro:
-      totalRequisicoes > 0
-        ? Number((totalErros / totalRequisicoes).toFixed(4))
-        : 0,
-    duracao_media_ms:
-      totalRequisicoes > 0 ? Math.round(duracaoTotalMs / totalRequisicoes) : 0,
+    taxa_erro: totalRequisicoes > 0 ? Number((totalErros / totalRequisicoes).toFixed(4)) : 0,
+    duracao_media_ms: totalRequisicoes > 0 ? Math.round(duracaoTotalMs / totalRequisicoes) : 0,
     rotas,
     ultimos_erros: ultimosErros.slice(-10),
   };

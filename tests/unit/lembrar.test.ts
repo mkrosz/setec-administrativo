@@ -36,9 +36,7 @@ beforeEach(() => {
           return;
         }
         const parte = v.split(";")[0] ?? "";
-        const outros = cookie
-          .split("; ")
-          .filter((c) => c && !c.startsWith(`${nome}=`));
+        const outros = cookie.split("; ").filter((c) => c && !c.startsWith(`${nome}=`));
         cookie = [...outros, parte].filter(Boolean).join("; ");
       },
     },

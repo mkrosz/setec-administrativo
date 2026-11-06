@@ -20,13 +20,13 @@ Este documento descreve as implementações realizadas para atender aos requisit
 
 ### Distribuição dos Testes
 
-| Tipo | Quantidade | Localização |
-|------|-----------|-------------|
-| Unitários | 97 | `tests/unit/**/*.test.ts` |
-| Integração | 10 | `tests/integracao/**/*.test.ts` |
-| E2E | 11 | `tests/e2e/**/*.spec.ts` |
-| Performance | 7 | `tests/performance/**/*.test.ts` |
-| **Total** | **125** | |
+| Tipo        | Quantidade | Localização                      |
+| ----------- | ---------- | -------------------------------- |
+| Unitários   | 97         | `tests/unit/**/*.test.ts`        |
+| Integração  | 10         | `tests/integracao/**/*.test.ts`  |
+| E2E         | 11         | `tests/e2e/**/*.spec.ts`         |
+| Performance | 7          | `tests/performance/**/*.test.ts` |
+| **Total**   | **125**    |                                  |
 
 ### Testes Adicionados
 
@@ -37,12 +37,13 @@ Este documento descreve as implementações realizadas para atender aos requisit
 Testes públicos que verificam os endpoints de observabilidade sem necessidade de autenticação:
 
 ```typescript
-test("115 - /healthz retorna status ok e uptime")
-test("116 - /metrics retorna agregado de requisições")
-test("117 - /healthz e /metrics têm cache-control no-store")
+test("115 - /healthz retorna status ok e uptime");
+test("116 - /metrics retorna agregado de requisições");
+test("117 - /healthz e /metrics têm cache-control no-store");
 ```
 
 **Execução:**
+
 ```bash
 pnpm run test:e2e
 ```
@@ -54,16 +55,17 @@ pnpm run test:e2e
 Testes que validam a funcionalidade de observabilidade integrada no servidor:
 
 ```typescript
-test("118 - statusSaude sempre retorna ok com timestamp ISO")
-test("119 - snapshotMetricas com requisições de sucesso e erro")
-test("120 - snapshotMetricas rotas ordenadas por contagem")
-test("121 - normalizarCaminho com UUID múltiplos")
-test("122 - normalizarCaminho sem pathname usa /")
-test("123 - normalizarCaminho com query string complexa")
-test("124 - normalizarCaminho com caminho muito longo limita a 120 chars")
+test("118 - statusSaude sempre retorna ok com timestamp ISO");
+test("119 - snapshotMetricas com requisições de sucesso e erro");
+test("120 - snapshotMetricas rotas ordenadas por contagem");
+test("121 - normalizarCaminho com UUID múltiplos");
+test("122 - normalizarCaminho sem pathname usa /");
+test("123 - normalizarCaminho com query string complexa");
+test("124 - normalizarCaminho com caminho muito longo limita a 120 chars");
 ```
 
 **Execução:**
+
 ```bash
 pnpm run test
 ```
@@ -155,6 +157,7 @@ outputFile: {
 ```
 
 **Arquivos gerados:**
+
 - `test-results/vitest.json` - Relatório em JSON
 - `test-results/vitest-junit.xml` - Relatório compatível com JUnit
 - `coverage/` - Diretório com relatórios de cobertura:
@@ -193,6 +196,7 @@ reporter: [
 ```
 
 **Arquivos gerados:**
+
 - `playwright-report/index.html` - Relatório HTML visual com screenshots e traces
 - `test-results/playwright-junit.xml` - Relatório JUnit
 - `test-results/` - Diretório com traces e screenshots (apenas em falhas)
@@ -272,14 +276,15 @@ Logs em formato JSON com metadados estruturados:
 
 ```typescript
 export function logEvento(
-  nivel: NivelLog,  // "info" | "warn" | "error"
+  nivel: NivelLog, // "info" | "warn" | "error"
   tipo: string,
   mensagem: string,
   dados?: Record<string, unknown>,
-): EventoLog
+): EventoLog;
 ```
 
 **Exemplo de log gerado:**
+
 ```json
 {
   "ts": "2026-11-04T10:30:00.000Z",
@@ -294,6 +299,7 @@ export function logEvento(
 ```
 
 **Níveis de log:**
+
 - `info` - Informações gerais (console.info)
 - `warn` - Avisos (console.warn)
 - `error` - Erros (console.error, mantém em buffer)
@@ -303,10 +309,11 @@ export function logEvento(
 Registro automático de métricas HTTP:
 
 ```typescript
-export function registrarRequisicao(m: MetricaRequisicao)
+export function registrarRequisicao(m: MetricaRequisicao);
 ```
 
 **Métricas coletadas:**
+
 - Contagem total de requisições
 - Contagem de erros (status >= 500)
 - Duração média por requisição
@@ -336,6 +343,7 @@ Retorna status de saúde do sistema:
 ```
 
 **Uso:**
+
 - Health checks automatizados (UptimeRobot, Better Stack, etc.)
 - Load balancers
 - Orquestradores (Kubernetes, Docker Swarm)
@@ -373,6 +381,7 @@ Retorna snapshot das métricas coletadas:
 ```
 
 **Uso:**
+
 - Monitoramento de performance
 - Análise de tendências
 - Debug de problemas
@@ -430,12 +439,14 @@ location = /healthz {
 #### Scripts de Verificação
 
 **Bash:** `scripts/docker/verify.sh`
+
 ```bash
 code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL/healthz")
 [ "$code" = "200" ] && ok "/healthz -> 200" || falha "/healthz -> $code"
 ```
 
 **PowerShell:** `scripts/docker/verify.ps1`
+
 ```powershell
 $r = Get-Http "$BaseUrl/healthz"
 if ($r.StatusCode -eq 200) { Ok "/healthz -> 200" } else { Falha "/healthz -> $($r.StatusCode)" }
@@ -450,9 +461,9 @@ if ($r.StatusCode -eq 200) { Ok "/healthz -> 200" } else { Falha "/healthz -> $(
 Verifica que os endpoints funcionam corretamente:
 
 ```typescript
-test("115 - /healthz retorna status ok e uptime")
-test("116 - /metrics retorna agregado de requisições")
-test("117 - /healthz e /metrics têm cache-control no-store")
+test("115 - /healthz retorna status ok e uptime");
+test("116 - /metrics retorna agregado de requisições");
+test("117 - /healthz e /metrics têm cache-control no-store");
 ```
 
 #### Testes Unitários
@@ -462,9 +473,9 @@ test("117 - /healthz e /metrics têm cache-control no-store")
 Valida a lógica de observabilidade:
 
 ```typescript
-test("118 - statusSaude sempre retorna ok com timestamp ISO")
-test("119 - snapshotMetricas com requisições de sucesso e erro")
-test("120 - snapshotMetricas rotas ordenadas por contagem")
+test("118 - statusSaude sempre retorna ok com timestamp ISO");
+test("119 - snapshotMetricas com requisições de sucesso e erro");
+test("120 - snapshotMetricas rotas ordenadas por contagem");
 // ... outros testes
 ```
 
@@ -495,15 +506,18 @@ curl https://seu-dominio.com/metrics | jq
 Configure ferramentas externas para monitorar `/healthz`:
 
 **UptimeRobot:**
+
 - URL: `https://seu-dominio.com/healthz`
 - Esperado: Status 200
 - Intervalo: 5 minutos
 
 **Better Stack:**
+
 - Endpoint HTTP: `https://seu-dominio.com/healthz`
 - Alertas: Se status != 200
 
 **Kubernetes Liveness/Readiness:**
+
 ```yaml
 livenessProbe:
   httpGet:
@@ -566,20 +580,22 @@ Para ambientes de produção com maiores requisitos, considerar:
 
 ### O que foi implementado
 
-| Item | Status | Detalhes |
-|------|--------|----------|
-| **4. Testes** | ✅ 125 testes | 97 unitários, 10 integração, 11 E2E, 7 performance |
-| **5. Evidências** | ✅ CI automatizado | Relatórios JSON, JUnit, HTML, cobertura de código |
-| **9. Observabilidade** | ✅ In-repo | `/healthz`, `/metrics`, logs estruturados, monitoramento |
+| Item                   | Status             | Detalhes                                                 |
+| ---------------------- | ------------------ | -------------------------------------------------------- |
+| **4. Testes**          | ✅ 125 testes      | 97 unitários, 10 integração, 11 E2E, 7 performance       |
+| **5. Evidências**      | ✅ CI automatizado | Relatórios JSON, JUnit, HTML, cobertura de código        |
+| **9. Observabilidade** | ✅ In-repo         | `/healthz`, `/metrics`, logs estruturados, monitoramento |
 
 ### Arquivos Criados/Modificados
 
 **Novos arquivos:**
+
 - `tests/e2e/observabilidade.spec.ts` - Testes E2E de observabilidade
 - `tests/unit/server.test.ts` - Testes unitários do servidor
 - `docs/TESTES-E-OBSERVABILIDADE.md` - Este documento
 
 **Arquivos modificados:**
+
 - `.github/workflows/ci.yml` - Adicionada job E2E e publicação de evidências
 - `playwright.config.ts` - Adicionado reporter JUnit para CI
 - `vitest.config.ts` - Já configurado para gerar evidências (sem alterações)
@@ -589,6 +605,7 @@ Para ambientes de produção com maiores requisitos, considerar:
 ### Próximos Passos Sugeridos
 
 1. **Rodar os testes localmente:**
+
    ```bash
    pnpm run test:coverage
    pnpm run test:e2e

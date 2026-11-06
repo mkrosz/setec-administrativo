@@ -130,13 +130,15 @@ describe("palestrantesDe e nomesPalestrantes", () => {
     });
     expect(lista).toHaveLength(2);
     expect(lista[0]?.nome).toBe("Ana");
-    expect(nomesPalestrantes({
-      palestrantes: lista,
-      nome_completo: "",
-      cargo: null,
-      sobre_palestrante: null,
-      foto_url: null,
-    })).toBe("Ana, Bia");
+    expect(
+      nomesPalestrantes({
+        palestrantes: lista,
+        nome_completo: "",
+        cargo: null,
+        sobre_palestrante: null,
+        foto_url: null,
+      }),
+    ).toBe("Ana, Bia");
   });
 
   it("014 - monta um palestrante a partir das colunas antigas", () => {
@@ -223,9 +225,7 @@ describe("presença: local, coordenadas e maps", () => {
     expect(
       coordenadasPresenca(presenca({ latitude: -23.5, longitude: -46.6, precisao_m: 12.4 })),
     ).toBe("-23.50000, -46.60000 (±12 m)");
-    expect(coordenadasPresenca(presenca({ latitude: 1, longitude: 2 }))).toBe(
-      "1.00000, 2.00000",
-    );
+    expect(coordenadasPresenca(presenca({ latitude: 1, longitude: 2 }))).toBe("1.00000, 2.00000");
   });
 
   it("020 - formatLocalPresenca prioriza nome, depois coords, depois aviso", () => {

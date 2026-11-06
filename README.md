@@ -36,6 +36,7 @@ banco **Supabase**.
 - [Segurança](#segurança)
 
 📖 **Documentação adicional:**
+
 - [Testes e Observabilidade](docs/TESTES-E-OBSERVABILIDADE.md) - Detalhes completos sobre os 125 testes, evidências de execução e implementação de observabilidade
 - [Deploy com Docker](docs/DEPLOY-DOCKER.md) - Guia de deploy usando Docker e Nginx
 
@@ -358,13 +359,13 @@ Para validar o ambiente:
 
 ### Testes automatizados
 
-| Tipo        | Ferramenta | Pasta                 | Comando             |
-| ----------- | ---------- | --------------------- | ------------------- |
-| Unitário    | Vitest     | `tests/unit/`         | `pnpm test`         |
-| Integração  | Vitest     | `tests/integracao/`   | `pnpm test`         |
-| Performance | Vitest     | `tests/performance/`  | `pnpm test`         |
-| Cobertura   | Vitest+v8  | `coverage/`           | `pnpm test:coverage`|
-| E2E         | Playwright | `tests/e2e/`          | `pnpm test:e2e`     |
+| Tipo        | Ferramenta | Pasta                | Comando              |
+| ----------- | ---------- | -------------------- | -------------------- |
+| Unitário    | Vitest     | `tests/unit/`        | `pnpm test`          |
+| Integração  | Vitest     | `tests/integracao/`  | `pnpm test`          |
+| Performance | Vitest     | `tests/performance/` | `pnpm test`          |
+| Cobertura   | Vitest+v8  | `coverage/`          | `pnpm test:coverage` |
+| E2E         | Playwright | `tests/e2e/`         | `pnpm test:e2e`      |
 
 A suíte Vitest (unitário + integração + performance) possui **125 testes** e
 roda sem rede e sem chaves — inclusive no CI. Os E2E abrem o painel num
@@ -397,11 +398,11 @@ pnpm test:e2e
 Cada execução do CI gera o artefato **`evidencias-testes`** (Actions → CI →
 Artifacts), com retenção de 30 dias:
 
-| Conteúdo                         | Origem                                      |
-| -------------------------------- | ------------------------------------------- |
-| `coverage/` (HTML, LCOV, JSON)   | `pnpm test:coverage`                        |
-| `test-results/vitest.json`       | relatório JSON do Vitest                    |
-| `test-results/vitest-junit.xml`  | relatório JUnit (compatível com dashboards) |
+| Conteúdo                        | Origem                                      |
+| ------------------------------- | ------------------------------------------- |
+| `coverage/` (HTML, LCOV, JSON)  | `pnpm test:coverage`                        |
+| `test-results/vitest.json`      | relatório JSON do Vitest                    |
+| `test-results/vitest-junit.xml` | relatório JUnit (compatível com dashboards) |
 
 Localmente, `pnpm test:coverage` escreve as mesmas pastas (gitignoradas). Para
 anexar evidência a um PR ou à lista do projeto: baixe o artefato do Actions ou
@@ -431,10 +432,10 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda no GitHub
 Actions a cada push na `main`, em todo Pull Request e manualmente
 (**Actions → CI → Run workflow**):
 
-| Job                             | Etapas                                                                                                                                                                      |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Qualidade, testes e build       | instala as dependências, valida estrutura, formatação, lint e tipos, roda `pnpm test:coverage`, publica o artefato `evidencias-testes` e faz o build                       |
-| Verificação de vulnerabilidades | `pnpm audit` das dependências de produção (informativo: não bloqueia o merge)                                                                                               |
+| Job                             | Etapas                                                                                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Qualidade, testes e build       | instala as dependências, valida estrutura, formatação, lint e tipos, roda `pnpm test:coverage`, publica o artefato `evidencias-testes` e faz o build |
+| Verificação de vulnerabilidades | `pnpm audit` das dependências de produção (informativo: não bloqueia o merge)                                                                        |
 
 A pipeline cancela execuções antigas quando chega um push novo na mesma branch.
 Um PR só deve ser mergeado com o CI verde.
@@ -457,11 +458,11 @@ A tela de login e o check-in público estão em `tests/e2e/publico.spec.ts`.
 
 Implementação **in-repo** (sem contas externas obrigatórias):
 
-| Recurso              | Como                                                                 |
-| -------------------- | -------------------------------------------------------------------- |
-| Logs de eventos/erros| JSON estruturado via `src/lib/observabilidade.ts` (`logEvento` / `logErro`) |
-| Métricas HTTP        | cada request registra método, caminho, status e duração; agregado em `/metrics` |
-| Disponibilidade      | `GET /healthz` → `{ status: "ok", uptime_s, ts }`                    |
+| Recurso               | Como                                                                            |
+| --------------------- | ------------------------------------------------------------------------------- |
+| Logs de eventos/erros | JSON estruturado via `src/lib/observabilidade.ts` (`logEvento` / `logErro`)     |
+| Métricas HTTP         | cada request registra método, caminho, status e duração; agregado em `/metrics` |
+| Disponibilidade       | `GET /healthz` → `{ status: "ok", uptime_s, ts }`                               |
 
 No Docker, o Nginx também expõe `/healthz` (ver `docs/DEPLOY-DOCKER.md`). No
 runtime da aplicação (Cloudflare Workers / Node), `src/server.ts` responde
