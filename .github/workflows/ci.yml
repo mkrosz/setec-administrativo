@@ -98,41 +98,38 @@ jobs:
       - name: Instalar Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Build da aplicação
-        run: pnpm run build
-
-      - name: Iniciar servidor de preview
+      - name: Iniciar servidor de desenvolvimento
         run: |
-          pnpm run preview > /tmp/preview.log 2>&1 &
-          echo $! > /tmp/preview.pid
+          pnpm run dev > /tmp/dev.log 2>&1 &
+          echo $! > /tmp/dev.pid
         env:
-          PORT: 4173
+          PORT: 8080
 
       - name: Aguardar servidor estar pronto
         run: |
           for i in {1..30}; do
-            if curl -s http://localhost:4173/healthz > /dev/null; then
+            if curl -s http://localhost:8080/healthz > /dev/null; then
               echo "Servidor pronto"
               exit 0
             fi
             echo "Aguardando servidor... ($i/30)"
             sleep 2
           done
-          echo "Logs do preview:"
-          cat /tmp/preview.log
+          echo "Logs do dev:"
+          cat /tmp/dev.log
           echo "Servidor não ficou pronto"
           exit 1
 
       - name: Rodar testes E2E
         run: pnpm run test:e2e
         env:
-          E2E_BASE_URL: http://localhost:4173
+          E2E_BASE_URL: http://localhost:8080
 
-      - name: Parar servidor de preview
+      - name: Parar servidor de desenvolvimento
         if: always()
         run: |
-          if [ -f /tmp/preview.pid ]; then
-            kill $(cat /tmp/preview.pid) || true
+          if [ -f /tmp/dev.pid ]; then
+            kill $(cat /tmp/dev.pid) || true
           fi
 
       - name: Publicar evidências E2E
