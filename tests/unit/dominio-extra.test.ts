@@ -69,7 +69,9 @@ describe("domínio e utilitários - cobertura extra", () => {
   });
 
   it("112 - cn com condicionais", () => {
-    expect(cn("base", true && "on", false && "off")).toBe("base on");
+    const cond1 = true;
+    const cond2 = false;
+    expect(cn("base", cond1 && "on", cond2 && "off")).toBe("base on");
   });
 
   it("113 - normalizarCaminho de URL absoluta sem path", () => {
