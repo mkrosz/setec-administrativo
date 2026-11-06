@@ -7,9 +7,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Permissão mínima: a pipeline só lê o código.
+# Leitura do código + escrita de artefatos (evidências de testes).
 permissions:
   contents: read
+  actions: write
 
 # Um push novo na mesma branch cancela a execução anterior.
 concurrency:
@@ -55,11 +56,95 @@ jobs:
       - name: Checagem de tipos (TypeScript)
         run: pnpm run typecheck
 
-      - name: Testes automatizados
-        run: pnpm run --if-present test
+      - name: Testes automatizados com cobertura
+        run: pnpm run test:coverage
+
+      - name: Publicar evidências dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-testes
+          path: |
+            coverage/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Build da aplicação
         run: pnpm run build
+
+  e2e:
+    name: Testes E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Instalar Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build da aplicação
+        run: pnpm run build
+
+      - name: Iniciar servidor de preview
+        run: |
+          pnpm run preview > /tmp/preview.log 2>&1 &
+          echo $! > /tmp/preview.pid
+        env:
+          PORT: 4173
+
+      - name: Aguardar servidor estar pronto
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:4173/healthz > /dev/null; then
+              echo "Servidor pronto"
+              exit 0
+            fi
+            echo "Aguardando servidor... ($i/30)"
+            sleep 2
+          done
+          echo "Logs do preview:"
+          cat /tmp/preview.log
+          echo "Servidor não ficou pronto"
+          exit 1
+
+      - name: Rodar testes E2E
+        run: pnpm run test:e2e
+        env:
+          E2E_BASE_URL: http://localhost:4173
+
+      - name: Parar servidor de preview
+        if: always()
+        run: |
+          if [ -f /tmp/preview.pid ]; then
+            kill $(cat /tmp/preview.pid) || true
+          fi
+
+      - name: Publicar evidências E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-e2e
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 30
 
   seguranca:
     name: Verificação de vulnerabilidades
