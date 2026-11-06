@@ -23,12 +23,14 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: process.env["E2E_BASE_URL"]
-    ? undefined
+  ...(process.env["E2E_BASE_URL"]
+    ? {}
     : {
-        command: "pnpm dev",
-        url: baseURL,
-        reuseExistingServer: true,
-        timeout: 120_000,
-      },
+        webServer: {
+          command: "pnpm dev",
+          url: baseURL,
+          reuseExistingServer: true,
+          timeout: 120_000,
+        },
+      }),
 });

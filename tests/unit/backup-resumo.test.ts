@@ -18,16 +18,16 @@ describe("resumoBackup", () => {
   });
 
   it("053 - conta arrays e marca evento presente", () => {
-    const dados: Partial<BackupData> = {
+    const dados = {
       exportado_em: "2026-11-04T12:00:00.000Z",
       evento: { id: "1" } as BackupData["evento"],
       palestras: [{ id: "a" }, { id: "b" }] as BackupData["palestras"],
       apoiadores: [{ id: "x" }] as BackupData["apoiadores"],
-      comissao: [{}, {}] as unknown as BackupData["comissao"],
-      minicursos: [{}] as unknown as BackupData["minicursos"],
-      minicurso_inscricoes: [{}, {}, {}] as unknown as BackupData["minicurso_inscricoes"],
-      presencas: [{}, {}] as unknown as BackupData["presencas"],
-    };
+      comissao: [{}, {}] as BackupData["comissao"],
+      minicursos: [{}] as BackupData["minicursos"],
+      minicurso_inscricoes: [{}, {}, {}] as BackupData["minicurso_inscricoes"],
+      presencas: [{}, {}] as BackupData["presencas"],
+    } as any as Partial<BackupData>;
     const r = resumoBackup(dados);
     expect(r.evento).toBe(true);
     expect(r.palestras).toBe(2);
