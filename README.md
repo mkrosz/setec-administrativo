@@ -28,11 +28,16 @@ banco **Supabase**.
 - [Edge Functions](#edge-functions)
 - [Execução](#execução)
 - [Testes e qualidade](#testes-e-qualidade)
+- [Logs, monitoramento e observabilidade](#logs-monitoramento-e-observabilidade)
 - [Deploy](#deploy)
 - [Docker](#docker)
 - [Processo de desenvolvimento](#processo-de-desenvolvimento)
 - [Solução de problemas](#solução-de-problemas)
 - [Segurança](#segurança)
+
+📖 **Documentação adicional:**
+- [Testes e Observabilidade](docs/TESTES-E-OBSERVABILIDADE.md) - Detalhes completos sobre os 125 testes, evidências de execução e implementação de observabilidade
+- [Deploy com Docker](docs/DEPLOY-DOCKER.md) - Guia de deploy usando Docker e Nginx
 
 ---
 
@@ -353,15 +358,21 @@ Para validar o ambiente:
 
 ### Testes automatizados
 
-| Tipo       | Ferramenta | Pasta               | Comando         |
-| ---------- | ---------- | ------------------- | --------------- |
-| Integração | Vitest     | `tests/integracao/` | `pnpm test`     |
-| E2E        | Playwright | `tests/e2e/`        | `pnpm test:e2e` |
+| Tipo        | Ferramenta | Pasta                 | Comando             |
+| ----------- | ---------- | --------------------- | ------------------- |
+| Unitário    | Vitest     | `tests/unit/`         | `pnpm test`         |
+| Integração  | Vitest     | `tests/integracao/`   | `pnpm test`         |
+| Performance | Vitest     | `tests/performance/`  | `pnpm test`         |
+| Cobertura   | Vitest+v8  | `coverage/`           | `pnpm test:coverage`|
+| E2E         | Playwright | `tests/e2e/`          | `pnpm test:e2e`     |
 
-Os testes de integração simulam o cliente do Supabase (Storage e Edge Functions),
-então rodam sem rede e sem chaves, inclusive no CI. Os E2E abrem o painel num
-navegador de verdade (sobem o `pnpm dev` sozinhos) e precisam de contas **de
-teste** no Supabase, configuradas no `.env`:
+A suíte Vitest (unitário + integração + performance) possui **125 testes** e
+roda sem rede e sem chaves — inclusive no CI. Os E2E abrem o painel num
+navegador de verdade (sobem o `pnpm dev` sozinhos). Os fluxos autenticados
+precisam de contas **de teste** no Supabase; as páginas públicas
+(`tests/e2e/publico.spec.ts`) não precisam.
+
+> 📖 **Documentação completa:** Veja [docs/TESTES-E-OBSERVABILIDADE.md](docs/TESTES-E-OBSERVABILIDADE.md) para detalhes sobre todos os testes, evidências de execução e observabilidade.
 
 | Variável                                 | Para quê                                                         |
 | ---------------------------------------- | ---------------------------------------------------------------- |
@@ -370,14 +381,33 @@ teste** no Supabase, configuradas no `.env`:
 | `E2E_PERMITIR_ESCRITA=1`                 | Libera os testes que criam e apagam palestras e minicursos       |
 | `E2E_BASE_URL`                           | Testar outro endereço (ex.: o Docker em `http://localhost:8080`) |
 
-Sem essas variáveis, os E2E correspondentes são pulados. Os registros criados
-pelos testes começam com `[E2E]` e são apagados no fim de cada teste; use um
-projeto Supabase de teste para não mexer nos dados do evento.
+Sem as variáveis de conta, os E2E autenticados são pulados. Os registros
+criados pelos testes começam com `[E2E]` e são apagados no fim de cada teste;
+use um projeto Supabase de teste para não mexer nos dados do evento.
 
 ```bash
+pnpm test                 # unitário + integração + performance
+pnpm test:coverage        # igual ao CI, gera coverage/ e test-results/
 npx playwright install chromium   # só na primeira vez
 pnpm test:e2e
 ```
+
+### Evidências de execução
+
+Cada execução do CI gera o artefato **`evidencias-testes`** (Actions → CI →
+Artifacts), com retenção de 30 dias:
+
+| Conteúdo                         | Origem                                      |
+| -------------------------------- | ------------------------------------------- |
+| `coverage/` (HTML, LCOV, JSON)   | `pnpm test:coverage`                        |
+| `test-results/vitest.json`       | relatório JSON do Vitest                    |
+| `test-results/vitest-junit.xml`  | relatório JUnit (compatível com dashboards) |
+
+Localmente, `pnpm test:coverage` escreve as mesmas pastas (gitignoradas). Para
+anexar evidência a um PR ou à lista do projeto: baixe o artefato do Actions ou
+abra `coverage/index.html` no navegador.
+
+> 📖 **Documentação completa:** Veja [docs/TESTES-E-OBSERVABILIDADE.md](docs/TESTES-E-OBSERVABILIDADE.md) para detalhes sobre todos os testes, evidências de execução e observabilidade.
 
 ### Verificações antes do Pull Request
 
@@ -388,7 +418,7 @@ pnpm validate       # estrutura do repositório e nenhum .env versionado
 pnpm format:check   # formatação (Prettier)
 pnpm lint           # ESLint
 pnpm typecheck      # TypeScript
-pnpm test           # testes de integração
+pnpm test:coverage  # testes + cobertura
 pnpm build
 ```
 
@@ -401,14 +431,13 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda no GitHub
 Actions a cada push na `main`, em todo Pull Request e manualmente
 (**Actions → CI → Run workflow**):
 
-| Job                             | Etapas                                                                                                                                            |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Qualidade, testes e build       | instala as dependências com `pnpm install --frozen-lockfile`, valida a estrutura, verifica formatação, lint e tipos, roda os testes e faz o build |
-| Verificação de vulnerabilidades | `pnpm audit` das dependências de produção (informativo: não bloqueia o merge)                                                                     |
+| Job                             | Etapas                                                                                                                                                                      |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Qualidade, testes e build       | instala as dependências, valida estrutura, formatação, lint e tipos, roda `pnpm test:coverage`, publica o artefato `evidencias-testes` e faz o build                       |
+| Verificação de vulnerabilidades | `pnpm audit` das dependências de produção (informativo: não bloqueia o merge)                                                                                               |
 
-A pipeline tem permissão só de leitura (`contents: read`) e cancela execuções
-antigas quando chega um push novo na mesma branch. Um PR só deve ser mergeado
-com o CI verde.
+A pipeline cancela execuções antigas quando chega um push novo na mesma branch.
+Um PR só deve ser mergeado com o CI verde.
 
 Roteiro de teste manual:
 
@@ -422,6 +451,34 @@ Roteiro de teste manual:
 6. Exportar um backup, alterar algo e restaurar pelo ponto de restauração.
 
 Os itens 1, 2, 3 (cadastro) e 5 já têm versão automatizada em `tests/e2e/`.
+A tela de login e o check-in público estão em `tests/e2e/publico.spec.ts`.
+
+## Logs, monitoramento e observabilidade
+
+Implementação **in-repo** (sem contas externas obrigatórias):
+
+| Recurso              | Como                                                                 |
+| -------------------- | -------------------------------------------------------------------- |
+| Logs de eventos/erros| JSON estruturado via `src/lib/observabilidade.ts` (`logEvento` / `logErro`) |
+| Métricas HTTP        | cada request registra método, caminho, status e duração; agregado em `/metrics` |
+| Disponibilidade      | `GET /healthz` → `{ status: "ok", uptime_s, ts }`                    |
+
+No Docker, o Nginx também expõe `/healthz` (ver `docs/DEPLOY-DOCKER.md`). No
+runtime da aplicação (Cloudflare Workers / Node), `src/server.ts` responde
+`/healthz` e `/metrics` antes de encaminhar o restante ao app.
+
+Exemplos:
+
+```bash
+curl -s https://SEU_DOMINIO/healthz
+curl -s https://SEU_DOMINIO/metrics
+```
+
+Opcional (fora do repositório): apontar um monitor de uptime gratuito
+(UptimeRobot, Better Stack, etc.) para `/healthz`, ou ligar um APM (Sentry)
+quando houver conta — o código já centraliza erros em `logErro`.
+
+> 📖 **Documentação completa:** Veja [docs/TESTES-E-OBSERVABILIDADE.md](docs/TESTES-E-OBSERVABILIDADE.md) para detalhes sobre a implementação de observabilidade, testes dos endpoints e monitoramento.
 
 ## Deploy
 

@@ -2,6 +2,13 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import {
+  logErro,
+  normalizarCaminho,
+  registrarRequisicao,
+  snapshotMetricas,
+  statusSaude,
+} from "./lib/observabilidade";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -28,7 +35,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text();
   if (!isH3SwallowedErrorBody(body)) return response;
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  const erro = consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`);
+  logErro("ssr.swallowed", erro);
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -44,14 +52,57 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+function respostaObservabilidade(request: Request): Response | null {
+  const caminho = normalizarCaminho(request.url);
+  if (caminho === "/healthz") {
+    return Response.json(statusSaude(), {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (caminho === "/metrics") {
+    return Response.json(snapshotMetricas(), {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const inicio = Date.now();
+    const metodo = request.method || "GET";
+    const caminho = normalizarCaminho(request.url);
+
+    const observavel = respostaObservabilidade(request);
+    if (observavel) {
+      registrarRequisicao({
+        metodo,
+        caminho,
+        status: observavel.status,
+        duracaoMs: Date.now() - inicio,
+      });
+      return observavel;
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalizada = await normalizeCatastrophicSsrResponse(response);
+      registrarRequisicao({
+        metodo,
+        caminho,
+        status: normalizada.status,
+        duracaoMs: Date.now() - inicio,
+      });
+      return normalizada;
     } catch (error) {
-      console.error(error);
+      logErro("server.fetch", error, { metodo, caminho });
+      registrarRequisicao({
+        metodo,
+        caminho,
+        status: 500,
+        duracaoMs: Date.now() - inicio,
+      });
       return new Response(renderErrorPage(), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },

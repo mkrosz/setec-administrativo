@@ -11,7 +11,11 @@ export default defineConfig({
   workers: 1,
   retries: process.env["CI"] ? 1 : 0,
   timeout: 60_000,
-  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+    ["junit", { outputFile: "test-results/playwright-junit.xml" }],
+  ],
   use: {
     baseURL,
     locale: "pt-BR",
@@ -19,14 +23,12 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  ...(process.env["E2E_BASE_URL"]
-    ? {}
+  webServer: process.env["E2E_BASE_URL"]
+    ? undefined
     : {
-        webServer: {
-          command: "pnpm dev",
-          url: baseURL,
-          reuseExistingServer: true,
-          timeout: 120_000,
-        },
-      }),
+        command: "pnpm dev",
+        url: baseURL,
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
 });
