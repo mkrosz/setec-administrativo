@@ -10,7 +10,8 @@ describe("cn", () => {
   });
 
   it("042 - ignora valores falsy", () => {
-    expect(cn("a", false && "b", null, undefined, "c")).toBe("a c");
+    const cond = false;
+    expect(cn("a", cond && "b", null, undefined, "c")).toBe("a c");
   });
 });
 
