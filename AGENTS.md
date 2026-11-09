@@ -21,6 +21,6 @@ O projeto possui 125 testes automatizados (unitários, integração, E2E e perfo
 ### Endpoints de Observabilidade
 
 - `GET /healthz` - Health check para monitoramento de disponibilidade
-- `GET /metrics` - Métricas detalhadas de requisições e erros
+- `GET /metrics` - Métricas de requisições e erros (detalhes dos erros só com `Authorization: Bearer <METRICS_TOKEN>`)
 
 Implementação em `src/lib/observabilidade.ts` e `src/server.ts`.
