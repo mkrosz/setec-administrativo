@@ -47,6 +47,7 @@ supabase/.branches/
 public/version.json
 .deploy/
 
-# Relatórios dos testes (Playwright)
+# Relatórios dos testes (Vitest / Playwright)
 playwright-report/
 test-results/
+coverage/
