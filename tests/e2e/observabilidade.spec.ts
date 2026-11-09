@@ -30,8 +30,9 @@ test.describe("Observabilidade - endpoints públicos", () => {
       taxa_erro: expect.any(Number),
       duracao_media_ms: expect.any(Number),
       rotas: expect.any(Array),
-      ultimos_erros: expect.any(Array),
     });
+    // Mensagens de erro só aparecem com o METRICS_TOKEN.
+    expect(body).not.toHaveProperty("ultimos_erros");
   });
 
   test("117 - /healthz e /metrics têm cache-control no-store", async ({ request }) => {
