@@ -350,7 +350,9 @@ Retorna status de saúde do sistema:
 
 ##### `/metrics` - Métricas Detalhadas
 
-Retorna snapshot das métricas coletadas:
+Retorna snapshot das métricas coletadas. O campo `ultimos_erros` só aparece
+quando a requisição envia `Authorization: Bearer <METRICS_TOKEN>` (variável de
+ambiente do servidor); sem o token, a resposta traz apenas os números agregados:
 
 ```json
 {
@@ -529,7 +531,9 @@ livenessProbe:
 
 ### Logs de Erros
 
-Os últimos 50 erros são mantidos em memória e disponíveis em `/metrics`:
+Os últimos 50 erros são mantidos em memória. Os 10 mais recentes aparecem em
+`/metrics` **somente com o token** (`Authorization: Bearer <METRICS_TOKEN>`),
+para não expor detalhes internos publicamente:
 
 ```json
 {

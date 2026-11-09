@@ -473,7 +473,13 @@ Exemplos:
 ```bash
 curl -s https://SEU_DOMINIO/healthz
 curl -s https://SEU_DOMINIO/metrics
+# detalhes dos últimos erros (só com o METRICS_TOKEN do .env)
+curl -s -H "Authorization: Bearer $METRICS_TOKEN" https://SEU_DOMINIO/metrics
 ```
+
+O `/metrics` é público, mas **as mensagens de erro (`ultimos_erros`) só aparecem
+para quem envia o `METRICS_TOKEN`**, porque podem conter detalhes internos do
+servidor. Sem a variável configurada, ninguém vê esses detalhes.
 
 Opcional (fora do repositório): apontar um monitor de uptime gratuito
 (UptimeRobot, Better Stack, etc.) para `/healthz`, ou ligar um APM (Sentry)
