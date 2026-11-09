@@ -7,10 +7,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Leitura do código + escrita de artefatos (evidências de testes).
+# Permissão mínima: a pipeline só lê o código. O upload das evidências
+# (actions/upload-artifact) não depende das permissões do GITHUB_TOKEN.
 permissions:
   contents: read
-  actions: write
 
 # Um push novo na mesma branch cancela a execução anterior.
 concurrency:

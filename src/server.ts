@@ -5,6 +5,7 @@ import { renderErrorPage } from "./lib/error-page";
 import {
   logErro,
   normalizarCaminho,
+  podeVerErros,
   registrarRequisicao,
   snapshotMetricas,
   statusSaude,
@@ -60,7 +61,7 @@ function respostaObservabilidade(request: Request): Response | null {
     });
   }
   if (caminho === "/metrics") {
-    return Response.json(snapshotMetricas(), {
+    return Response.json(snapshotMetricas({ incluirErros: podeVerErros(request) }), {
       headers: { "cache-control": "no-store" },
     });
   }
