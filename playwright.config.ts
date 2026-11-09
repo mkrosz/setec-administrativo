@@ -11,7 +11,11 @@ export default defineConfig({
   workers: 1,
   retries: process.env["CI"] ? 1 : 0,
   timeout: 60_000,
-  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+    ["junit", { outputFile: "test-results/playwright-junit.xml" }],
+  ],
   use: {
     baseURL,
     locale: "pt-BR",
