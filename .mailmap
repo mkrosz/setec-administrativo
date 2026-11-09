@@ -1,0 +1,5 @@
+# Corrige a autoria nos comandos do Git (git log, git shortlog, git blame).
+# Os commits do Pedro foram feitos com um e-mail que não é da conta dele.
+Pedro <102178522+Dark70941@users.noreply.github.com> pedro <pedro@users.noreply.github.com>
+# Nome digitado errado no primeiro commit da Karina.
+KarinadeMoraesGarcia <karinamoraesgarciaa@gmail.com> KarinadeMoraesGarica <karinamoraesgarciaa@gmail.com>
