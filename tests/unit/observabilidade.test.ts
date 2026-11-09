@@ -4,6 +4,7 @@ import {
   logErro,
   logEvento,
   normalizarCaminho,
+  podeVerErros,
   registrarRequisicao,
   resetMetricasParaTestes,
   snapshotMetricas,
@@ -45,7 +46,9 @@ describe("logs estruturados", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     logErro("falha.x", new Error("quebrou"), { rota: "/x" });
     expect(spy).toHaveBeenCalled();
-    expect(snapshotMetricas().ultimos_erros.at(-1)?.mensagem).toBe("quebrou");
+    expect(snapshotMetricas({ incluirErros: true }).ultimos_erros?.at(-1)?.mensagem).toBe(
+      "quebrou",
+    );
   });
 
   it("060 - logErro aceita string e valor genérico", () => {
@@ -85,5 +88,30 @@ describe("métricas de requisição", () => {
     resetMetricasParaTestes();
     expect(snapshotMetricas().requisicoes).toBe(0);
     expect(snapshotMetricas().rotas).toEqual([]);
+  });
+});
+
+describe("proteção dos detalhes de erro no /metrics", () => {
+  it("125 - snapshot público não inclui as mensagens de erro", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    logErro("falha.interna", new Error("senha do banco errada"));
+
+    const publico = snapshotMetricas();
+    expect(publico).not.toHaveProperty("ultimos_erros");
+    expect(JSON.stringify(publico)).not.toContain("senha do banco");
+  });
+
+  it("126 - só libera os erros com o token certo no cabeçalho Authorization", () => {
+    const comToken = (valor?: string) =>
+      new Request("http://localhost/metrics", {
+        headers: valor ? { authorization: valor } : {},
+      });
+
+    expect(podeVerErros(comToken("Bearer segredo"), "segredo")).toBe(true);
+    expect(podeVerErros(comToken("Bearer errado"), "segredo")).toBe(false);
+    expect(podeVerErros(comToken(), "segredo")).toBe(false);
+    // Sem METRICS_TOKEN configurado, ninguém vê os erros.
+    expect(podeVerErros(comToken("Bearer "), "")).toBe(false);
+    expect(podeVerErros(comToken("Bearer undefined"), undefined)).toBe(false);
   });
 });

@@ -117,7 +117,11 @@ export function registrarRequisicao(m: MetricaRequisicao) {
   });
 }
 
-export function snapshotMetricas() {
+/**
+ * Agregado das métricas. As mensagens de erro só entram com `incluirErros`,
+ * porque podem conter detalhes internos e o /metrics é acessível publicamente.
+ */
+export function snapshotMetricas({ incluirErros = false }: { incluirErros?: boolean } = {}) {
   const rotas = [...porRota.entries()]
     .map(([rota, a]) => ({
       rota,
@@ -136,8 +140,17 @@ export function snapshotMetricas() {
     taxa_erro: totalRequisicoes > 0 ? Number((totalErros / totalRequisicoes).toFixed(4)) : 0,
     duracao_media_ms: totalRequisicoes > 0 ? Math.round(duracaoTotalMs / totalRequisicoes) : 0,
     rotas,
-    ultimos_erros: ultimosErros.slice(-10),
+    ...(incluirErros ? { ultimos_erros: ultimosErros.slice(-10) } : {}),
   };
+}
+
+/**
+ * true quando a requisição traz `Authorization: Bearer <METRICS_TOKEN>`.
+ * Sem METRICS_TOKEN configurado, ninguém vê os detalhes dos erros.
+ */
+export function podeVerErros(request: Request, token = process.env["METRICS_TOKEN"]): boolean {
+  if (!token) return false;
+  return request.headers.get("authorization") === `Bearer ${token}`;
 }
 
 export function statusSaude() {
