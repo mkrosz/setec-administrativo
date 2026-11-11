@@ -68,6 +68,7 @@ pontos de restauração.
 | **Apoiadores**                   | CRUD de patrocinadores com logo e cota (Master, Diamond, Titanium, Platinum, Gold).                                                                                                                                           |
 | **Comissão**                     | Membros por grupo: professores, 4º e 5º ano, e cursos da manhã (1º a 6º semestre) e da noite (1º a 8º).                                                                                                                       |
 | **Presença** (`/presenca`)       | Gera um **QR Code de 10 minutos** por palestra, projeta em tela cheia, mostra a chamada em tempo real, permite adicionar aluno à mão, gerenciar turmas e baixar a lista em PDF.                                               |
+| **Sorteio** (`/sorteio`)         | Roleta nas cores da SETEC montada com a chamada da palestra escolhida. Quem é sorteado sai da roleta; dá para incluir um aluno só no sorteio (nome, ano e curso), sem registrar presença, e projetar em tela cheia.           |
 | **Check-in** (`/checkin/:token`) | Página pública aberta pelo celular do aluno ao ler o QR Code: ele informa nome, RA e turma, e a localização do aparelho é registrada.                                                                                         |
 | **Backup e novo ano**            | Exportar/importar JSON, relatório do evento em PDF e "reset do ano" (apaga palestras, minicursos, apoiadores e comissão), sempre criando um ponto de restauração antes.                                                       |
 | **Controle de Acessos**          | Liberar, desativar, mudar o nível e excluir contas; ver os últimos acessos.                                                                                                                                                   |
@@ -107,6 +108,7 @@ e não apenas na interface.
 | RF10 | Fazer backup e restauração em JSON e reset dos dados do ano.                                                   |
 | RF11 | Registrar o histórico de alterações e permitir desfazer uma ação.                                              |
 | RF12 | Controlar níveis de acesso, congelamento do painel e acesso total temporário.                                  |
+| RF13 | Sortear alunos presentes em uma palestra por roleta, sem repetir sorteados.                                    |
 
 ### Não funcionais
 
@@ -170,6 +172,9 @@ flowchart LR
 3. O aluno lê o código, informa nome, RA e turma, e o navegador envia a localização.
 4. `registrar_presenca` confere se o token está ativo e se o RA ainda não marcou presença.
 5. A chamada atualiza no painel; ao final, a lista é baixada em PDF.
+6. Para sorteios, o botão **Sorteio** abre `/sorteio` com a chamada da palestra:
+   cada nome sorteado sai da roleta. O andamento do sorteio e os nomes incluídos
+   só para a roleta ficam salvos no navegador, nunca na lista de presença.
 
 ## Estrutura do projeto
 
@@ -185,6 +190,7 @@ setec-administrativo/
 │   │       ├── route.tsx       # guarda de autenticação
 │   │       ├── painel.tsx      # /painel — seções do evento e Controle de Acessos
 │   │       ├── presenca.tsx    # /presenca — QR Code, chamada e turmas
+│   │       ├── sorteio.tsx     # /sorteio — roleta com a chamada da palestra
 │   │       └── perfil.tsx      # /perfil
 │   ├── components/
 │   │   ├── setec/              # modais e seções do painel (Palestra, Minicursos, Master...)
