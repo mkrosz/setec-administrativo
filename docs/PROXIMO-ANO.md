@@ -70,10 +70,8 @@ Pontos que já sabemos que precisam de atenção:
 
 ## DevOps e infraestrutura
 
-- **Endereço público da Vercel.** Hoje a proteção de deploy da Vercel exige
-  login para abrir o site, e o domínio `setec-administrativo.vercel.app` não
-  está apontado. Configurar o domínio de produção (de preferência um domínio
-  próprio da SETEC) e liberar a produção.
+- **Domínio próprio.** A produção está em `setecfatecadmin.vercel.app`. Um domínio
+  da SETEC (ou um subdomínio da FATEC) deixa o endereço mais fácil de divulgar.
 - **CI obrigatório na `main`.** A proteção da branch exige revisão, mas não exige
   o CI verde. Marcar os jobs do CI como _required status checks_.
 - **Dependabot ou Renovate** para atualizar dependências automaticamente.

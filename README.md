@@ -507,13 +507,15 @@ O deploy é automático, sem comandos manuais:
 **Voltar uma versão (rollback):** no painel da Vercel, abra um deploy anterior
 de produção e use **Promote to Production** (ou **Instant Rollback**).
 
-**Endereço público:** a Vercel usa a proteção de deploy (Vercel Authentication)
-por padrão, o que exige login para abrir o site. Para o site ficar aberto, em
-**Settings → Deployment Protection** deixe a produção sem proteção e confira em
-**Settings → Domains** o domínio de produção. Para a verificação automática
-funcionar mesmo com a proteção ligada, crie em **Deployment Protection →
-Protection Bypass for Automation** um segredo e salve no GitHub como
-`VERCEL_AUTOMATION_BYPASS_SECRET` (Settings → Secrets and variables → Actions).
+**Endereço público (produção):** https://setecfatecadmin.vercel.app
+
+A Vercel está em **Standard Protection**: o domínio de produção é público, e os
+previews e os endereços gerados para cada deploy pedem login da Vercel. Para a
+verificação automática conseguir abrir os previews, crie em **Settings →
+Deployment Protection → Protection Bypass for Automation** um segredo e salve no
+GitHub como `VERCEL_AUTOMATION_BYPASS_SECRET` (Settings → Secrets and variables →
+Actions). Sem ele, a produção é verificada normalmente e os previews só geram um
+aviso.
 
 ### Publicação manual (alternativa)
 
