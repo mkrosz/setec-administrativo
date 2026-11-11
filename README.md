@@ -34,6 +34,7 @@ banco **Supabase**.
 - [Processo de desenvolvimento](#processo-de-desenvolvimento)
 - [Solução de problemas](#solução-de-problemas)
 - [Segurança](#segurança)
+- [Próximo ano](#próximo-ano)
 
 📖 **Documentação adicional:**
 
@@ -584,3 +585,9 @@ roteiro de demonstração está em [docs/DEPLOY-DOCKER.md](docs/DEPLOY-DOCKER.md
   organização e o host do banco: ela está no `.gitignore` e não deve ser versionada.
 - Dados de alunos (nome, RA, e-mail, turma, localização) só podem ser lidos por
   contas autenticadas, conforme a política de privacidade publicada no site.
+
+## Próximo ano
+
+Sugestões de funcionalidades, dívidas técnicas conhecidas, melhorias de DevOps e
+lições aprendidas para a próxima turma estão em
+[docs/PROXIMO-ANO.md](docs/PROXIMO-ANO.md).
