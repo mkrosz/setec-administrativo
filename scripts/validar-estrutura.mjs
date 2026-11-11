@@ -23,6 +23,9 @@ const obrigatorios = [
   "scripts/docker/deploy.sh",
   "scripts/docker/verify.sh",
   "docs/DEPLOY-DOCKER.md",
+  "docs/TESTES-E-OBSERVABILIDADE.md",
+  "docs/PROXIMO-ANO.md",
+  ".github/workflows/ci.yml",
 ];
 
 const erros = obrigatorios.filter((p) => !existsSync(p)).map((p) => `Arquivo ausente: ${p}`);
