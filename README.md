@@ -489,20 +489,50 @@ quando houver conta — o código já centraliza erros em `logErro`.
 
 ## Deploy
 
-O build usa Nitro com destino padrão **Cloudflare Workers**: o `pnpm build`
-gera a pasta `.output/` (com `server/wrangler.json`), que pode ser publicada com:
+### Entrega contínua (CD)
+
+O deploy é automático, sem comandos manuais:
+
+| Quando                | O que acontece                                                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pull Request aberto   | A **Vercel** publica uma versão de **preview** com endereço próprio e comenta o link no PR. O CI roda lint, tipos, testes, E2E e build.                |
+| Merge na `main`       | A Vercel publica em **produção**. O workflow **Docker** constrói, testa e publica as imagens no GitHub Container Registry (`ghcr.io`).                 |
+| Depois de cada deploy | O workflow **Verificação do deploy** (`.github/workflows/verificacao-deploy.yml`) acessa o endereço publicado e confere `/healthz` e a página inicial. |
+
+**Versão publicada:** cada deploy da Vercel fica ligado ao commit (aba
+**Deployments** do GitHub e painel da Vercel); as imagens Docker levam a versão
+`<package.json>-<commit>` e o `/version.json`.
+
+**Voltar uma versão (rollback):** no painel da Vercel, abra um deploy anterior
+de produção e use **Promote to Production** (ou **Instant Rollback**).
+
+**Endereço público:** a Vercel usa a proteção de deploy (Vercel Authentication)
+por padrão, o que exige login para abrir o site. Para o site ficar aberto, em
+**Settings → Deployment Protection** deixe a produção sem proteção e confira em
+**Settings → Domains** o domínio de produção. Para a verificação automática
+funcionar mesmo com a proteção ligada, crie em **Deployment Protection →
+Protection Bypass for Automation** um segredo e salve no GitHub como
+`VERCEL_AUTOMATION_BYPASS_SECRET` (Settings → Secrets and variables → Actions).
+
+### Publicação manual (alternativa)
+
+O build padrão do Nitro gera saída para **Cloudflare Workers**: o `pnpm build`
+cria a pasta `.output/` (com `server/wrangler.json`), que pode ser publicada com:
 
 ```bash
 pnpm build
 npx nitro deploy --prebuilt
 ```
 
-Checklist de publicação:
+Para servidor próprio, use o Docker (seção abaixo e `docs/DEPLOY-DOCKER.md`).
 
-1. CI verde na `main` (lint, tipos e build).
-2. Variáveis de ambiente configuradas no ambiente de produção.
+### Checklist de publicação
+
+1. CI verde no Pull Request e na `main`.
+2. Variáveis de ambiente configuradas na Vercel (as mesmas do `.env.example`).
 3. SQL novo rodado no Supabase **antes** de publicar o código que depende dele.
 4. Edge Functions alteradas publicadas com `supabase functions deploy`.
+5. Workflow **Verificação do deploy** verde depois do merge.
 
 ## Docker
 
