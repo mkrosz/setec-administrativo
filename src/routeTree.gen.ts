@@ -16,6 +16,7 @@ import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPresencaRouteImport } from './routes/_authenticated/presenca'
+import { Route as AuthenticatedSorteioRouteImport } from './routes/_authenticated/sorteio'
 import { Route as CheckinTokenRouteImport } from './routes/checkin.$token'
 
 const IndexRoute = IndexRouteImport.update({
@@ -52,6 +53,11 @@ const AuthenticatedPresencaRoute = AuthenticatedPresencaRouteImport.update({
   path: '/presenca',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSorteioRoute = AuthenticatedSorteioRouteImport.update({
+  id: '/sorteio',
+  path: '/sorteio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const CheckinTokenRoute = CheckinTokenRouteImport.update({
   id: '/checkin/$token',
   path: '/checkin/$token',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/presenca': typeof AuthenticatedPresencaRoute
+  '/sorteio': typeof AuthenticatedSorteioRoute
   '/checkin/$token': typeof CheckinTokenRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/presenca': typeof AuthenticatedPresencaRoute
+  '/sorteio': typeof AuthenticatedSorteioRoute
   '/checkin/$token': typeof CheckinTokenRoute
 }
 export interface FileRoutesById {
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/presenca': typeof AuthenticatedPresencaRoute
+  '/_authenticated/sorteio': typeof AuthenticatedSorteioRoute
   '/checkin/$token': typeof CheckinTokenRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/perfil'
     | '/presenca'
+    | '/sorteio'
     | '/checkin/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/perfil'
     | '/presenca'
+    | '/sorteio'
     | '/checkin/$token'
   id:
     | '__root__'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/perfil'
     | '/_authenticated/presenca'
+    | '/_authenticated/sorteio'
     | '/checkin/$token'
   fileRoutesById: FileRoutesById
 }
@@ -176,6 +188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPresencaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sorteio': {
+      id: '/_authenticated/sorteio'
+      path: '/sorteio'
+      fullPath: '/sorteio'
+      preLoaderRoute: typeof AuthenticatedSorteioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/checkin/$token': {
       id: '/checkin/$token'
       path: '/checkin/$token'
@@ -191,6 +210,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPresencaRoute: typeof AuthenticatedPresencaRoute
+  AuthenticatedSorteioRoute: typeof AuthenticatedSorteioRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -198,6 +218,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPresencaRoute: AuthenticatedPresencaRoute,
+  AuthenticatedSorteioRoute: AuthenticatedSorteioRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

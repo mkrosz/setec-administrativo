@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   Copy,
+  Dices,
   FileText,
   GraduationCap,
   Loader2,
@@ -441,6 +442,14 @@ function PresencaPage() {
           >
             {isLight ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
+          <Link
+            to="/sorteio"
+            search={palestraSelecionada ? { palestra: palestraSelecionada.id } : {}}
+            className="flex h-10 items-center gap-2 rounded-full border border-primary/60 bg-primary/10 px-5 text-sm text-foreground transition-colors hover:bg-primary/20"
+          >
+            <Dices className="h-4 w-4" />
+            Sorteio
+          </Link>
           <Link
             to="/painel"
             className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground transition-colors hover:text-foreground"
