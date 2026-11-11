@@ -6,6 +6,7 @@ import {
   CirclePlus,
   ChevronDown,
   ClipboardCheck,
+  Dices,
   Crown,
   Download,
   Eye,
@@ -727,6 +728,17 @@ function Painel() {
                 >
                   <ClipboardCheck className="h-4 w-4" />
                   <span className="hidden min-[400px]:inline">Presença</span>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  to="/sorteio"
+                  aria-label="Sorteio"
+                  title="Sorteio"
+                  className="flex h-10 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground sm:flex-none sm:px-5"
+                >
+                  <Dices className="h-4 w-4" />
+                  <span className="hidden min-[400px]:inline">Sorteio</span>
                 </Link>
               )}
             </div>
