@@ -34,6 +34,7 @@ banco **Supabase**.
 - [Processo de desenvolvimento](#processo-de-desenvolvimento)
 - [Solução de problemas](#solução-de-problemas)
 - [Segurança](#segurança)
+- [Próximo ano](#próximo-ano)
 
 📖 **Documentação adicional:**
 
@@ -495,20 +496,52 @@ quando houver conta — o código já centraliza erros em `logErro`.
 
 ## Deploy
 
-O build usa Nitro com destino padrão **Cloudflare Workers**: o `pnpm build`
-gera a pasta `.output/` (com `server/wrangler.json`), que pode ser publicada com:
+### Entrega contínua (CD)
+
+O deploy é automático, sem comandos manuais:
+
+| Quando                | O que acontece                                                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pull Request aberto   | A **Vercel** publica uma versão de **preview** com endereço próprio e comenta o link no PR. O CI roda lint, tipos, testes, E2E e build.                |
+| Merge na `main`       | A Vercel publica em **produção**. O workflow **Docker** constrói, testa e publica as imagens no GitHub Container Registry (`ghcr.io`).                 |
+| Depois de cada deploy | O workflow **Verificação do deploy** (`.github/workflows/verificacao-deploy.yml`) acessa o endereço publicado e confere `/healthz` e a página inicial. |
+
+**Versão publicada:** cada deploy da Vercel fica ligado ao commit (aba
+**Deployments** do GitHub e painel da Vercel); as imagens Docker levam a versão
+`<package.json>-<commit>` e o `/version.json`.
+
+**Voltar uma versão (rollback):** no painel da Vercel, abra um deploy anterior
+de produção e use **Promote to Production** (ou **Instant Rollback**).
+
+**Endereço público (produção):** https://setecfatecadmin.vercel.app
+
+A Vercel está em **Standard Protection**: o domínio de produção é público, e os
+previews e os endereços gerados para cada deploy pedem login da Vercel. Para a
+verificação automática conseguir abrir os previews, crie em **Settings →
+Deployment Protection → Protection Bypass for Automation** um segredo e salve no
+GitHub como `VERCEL_AUTOMATION_BYPASS_SECRET` (Settings → Secrets and variables →
+Actions). Sem ele, a produção é verificada normalmente e os previews só geram um
+aviso.
+
+### Publicação manual (alternativa)
+
+O build padrão do Nitro gera saída para **Cloudflare Workers**: o `pnpm build`
+cria a pasta `.output/` (com `server/wrangler.json`), que pode ser publicada com:
 
 ```bash
 pnpm build
 npx nitro deploy --prebuilt
 ```
 
-Checklist de publicação:
+Para servidor próprio, use o Docker (seção abaixo e `docs/DEPLOY-DOCKER.md`).
 
-1. CI verde na `main` (lint, tipos e build).
-2. Variáveis de ambiente configuradas no ambiente de produção.
+### Checklist de publicação
+
+1. CI verde no Pull Request e na `main`.
+2. Variáveis de ambiente configuradas na Vercel (as mesmas do `.env.example`).
 3. SQL novo rodado no Supabase **antes** de publicar o código que depende dele.
 4. Edge Functions alteradas publicadas com `supabase functions deploy`.
+5. Workflow **Verificação do deploy** verde depois do merge.
 
 ## Docker
 
@@ -560,3 +593,9 @@ roteiro de demonstração está em [docs/DEPLOY-DOCKER.md](docs/DEPLOY-DOCKER.md
   organização e o host do banco: ela está no `.gitignore` e não deve ser versionada.
 - Dados de alunos (nome, RA, e-mail, turma, localização) só podem ser lidos por
   contas autenticadas, conforme a política de privacidade publicada no site.
+
+## Próximo ano
+
+Sugestões de funcionalidades, dívidas técnicas conhecidas, melhorias de DevOps e
+lições aprendidas para a próxima turma estão em
+[docs/PROXIMO-ANO.md](docs/PROXIMO-ANO.md).

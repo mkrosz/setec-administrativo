@@ -1,0 +1,70 @@
+name: Verificação do deploy
+
+# Roda quando a Vercel avisa que um deploy (preview ou produção) terminou.
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Verificar aplicação publicada
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Produção: o domínio público (o endereço gerado para cada deploy pede login).
+      # Para trocar o domínio, crie a variável URL_PRODUCAO em Settings → Variables.
+      URL: ${{ github.event.deployment.environment == 'Production' && (vars.URL_PRODUCAO || 'https://setecfatecadmin.vercel.app') || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      AMBIENTE: ${{ github.event.deployment.environment }}
+      COMMIT: ${{ github.event.deployment.sha }}
+      # Opcional: libera a verificação quando a Vercel exige login (Deployment Protection).
+      BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Identificar a versão publicada
+        run: |
+          echo "Ambiente: $AMBIENTE"
+          echo "Endereço: $URL"
+          echo "Commit:   $COMMIT"
+          {
+            echo "### Deploy verificado"
+            echo "- Ambiente: **$AMBIENTE**"
+            echo "- Endereço: $URL"
+            echo "- Commit: \`${COMMIT:0:7}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Conferir /healthz e a página inicial
+        run: |
+          cabecalho=()
+          [ -n "$BYPASS" ] && cabecalho=(-H "x-vercel-protection-bypass: $BYPASS")
+
+          for tentativa in 1 2 3 4 5; do
+            codigo=$(curl -s -o /tmp/saude.json -w '%{http_code}' "${cabecalho[@]}" "$URL/healthz")
+            [ "$codigo" = "200" ] && break
+            echo "Tentativa $tentativa: /healthz -> $codigo"
+            # Protegido e sem o segredo: não adianta tentar de novo
+            if [ -z "$BYPASS" ] && [[ "$codigo" =~ ^(302|401|403)$ ]]; then break; fi
+            sleep 10
+          done
+
+          if [ "$codigo" = "401" ] || [ "$codigo" = "302" ] || [ "$codigo" = "403" ]; then
+            if [ -z "$BYPASS" ]; then
+              echo "::warning::Deploy protegido pela Vercel (HTTP $codigo). Configure o segredo VERCEL_AUTOMATION_BYPASS_SECRET para verificar."
+              exit 0
+            fi
+          fi
+
+          if [ "$codigo" != "200" ] || ! grep -q '"status":"ok"' /tmp/saude.json; then
+            echo "::error::/healthz respondeu $codigo: $(head -c 300 /tmp/saude.json)"
+            exit 1
+          fi
+          echo "/healthz -> 200 $(cat /tmp/saude.json)"
+
+          inicio=$(curl -s -o /dev/null -w '%{http_code}' "${cabecalho[@]}" "$URL/")
+          if [ "$inicio" != "200" ]; then
+            echo "::error::Página inicial respondeu $inicio"
+            exit 1
+          fi
+          echo "/ -> 200"
+          echo "- Saúde: \`/healthz\` e página inicial OK" >> "$GITHUB_STEP_SUMMARY"
