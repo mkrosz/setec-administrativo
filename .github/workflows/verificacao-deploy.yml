@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      # Produção: o domínio público (o endereço gerado para cada deploy pede login).
+      # Para trocar o domínio, crie a variável URL_PRODUCAO em Settings → Variables.
+      URL: ${{ github.event.deployment.environment == 'Production' && (vars.URL_PRODUCAO || 'https://setecfatecadmin.vercel.app') || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
       AMBIENTE: ${{ github.event.deployment.environment }}
       COMMIT: ${{ github.event.deployment.sha }}
       # Opcional: libera a verificação quando a Vercel exige login (Deployment Protection).
