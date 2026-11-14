@@ -173,8 +173,9 @@ flowchart LR
 3. O aluno lê o código, informa nome, RA e turma, e o navegador envia a localização.
 4. `registrar_presenca` confere se o token está ativo e se o RA ainda não marcou presença.
 5. A chamada atualiza no painel; ao final, a lista é baixada em PDF.
-6. Para sorteios, o botão **Sorteio** abre `/sorteio` com a chamada da palestra:
-   cada nome sorteado sai da roleta. O andamento do sorteio e os nomes incluídos
+6. Para sorteios, o botão **Sorteio** do painel inicial abre `/sorteio`; lá se
+   escolhe a palestra e a roleta é montada com a chamada dela. Cada nome sorteado
+   sai da roleta e o botão **Voltar ao painel** retorna à tela inicial. O andamento do sorteio e os nomes incluídos
    só para a roleta ficam salvos no navegador, nunca na lista de presença.
 
 ## Estrutura do projeto

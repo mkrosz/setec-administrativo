@@ -294,11 +294,11 @@ function SorteioPage() {
             {isLight ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
           <Link
-            to="/presenca"
+            to="/painel"
             className="flex h-10 items-center gap-2 rounded-full border border-border/70 px-5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar à presença
+            Voltar ao painel
           </Link>
         </div>
       </header>
